@@ -2,6 +2,14 @@
   "name": "macows-explorer",
   "version": "0.1.0",
   "description": "Community-driven macOS file explorer with a modular architecture",
+  "author": "Macows Explorer contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/ilianAZZ/Macows-Explorer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilianAZZ/Macows-Explorer.git"
+  },
+  "keywords": ["macos", "file-explorer", "tauri", "modular", "liquid-glass"],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
