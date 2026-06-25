@@ -11,7 +11,6 @@ export const SUBSCRIBABLE_EVENTS = new Set<string>([
   "file:open-no-app",
   "file:external-drop",
   "sidebar:item-remove",
-  "webdav:accounts-changed",
   "directory:changed",
 ]);
 

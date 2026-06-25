@@ -32,8 +32,6 @@ export interface EventMap {
   "sidebar:changed": undefined;
   /** User clicked the remove (✕) affordance on a sidebar item. */
   "sidebar:item-remove": { id: string };
-  /** Settings → WebDAV changed the account list; the module re-reads. */
-  "webdav:accounts-changed": undefined;
   /** Emitted by modules to invoke a registered action without touching the DOM. */
   "action:dispatch": { actionId: string };
   /** Emitted by SelectionStore whenever the selected items change. */
@@ -117,9 +115,6 @@ export const Events = {
   Sidebar: {
     changed: "sidebar:changed",
     itemRemove: "sidebar:item-remove",
-  },
-  Webdav: {
-    accountsChanged: "webdav:accounts-changed",
   },
   Home: {
     changed: "home:changed",

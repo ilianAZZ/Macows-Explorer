@@ -4,7 +4,6 @@ import { ThemeManager } from "../../core/theme-manager/ThemeManager";
 import { ShortcutManager, type KeyBinding } from "../../core/shortcut-manager/ShortcutManager";
 import { ModuleRegistry } from "../../core/module-registry/ModuleRegistry";
 import { ViewStore } from "../../core/stores/ViewStore";
-import { WebDavAccounts } from "./WebDavAccounts";
 import { DeclarativePanel } from "../Declarative/DeclarativePanel";
 import "./SettingsPanel.css";
 
@@ -189,8 +188,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               ))}
             </div>
           </section>
-
-          <WebDavAccounts />
 
           {ModuleRegistry.getSettingsSections().map((section) => (
             <section key={`${section.moduleId}.${section.id}`} className="settings-section">

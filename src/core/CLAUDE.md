@@ -181,7 +181,7 @@ events via declaration merging on `EventMap` (see the comment in `events.ts`).
 Of these, modules may subscribe ONLY to the whitelisted set in
 `sandbox/eventWhitelist.ts` (currently `app:ready`, `input:mouse-navigate`,
 `selection:changed`, `file:modifier-open`, `file:middle-open`, `file:open-no-app`,
-`file:external-drop`, `sidebar:item-remove`, `webdav:accounts-changed`, `directory:changed`).
+`file:external-drop`, `sidebar:item-remove`, `directory:changed`).
 `ui:changed` / `statusbar:changed` are host-internal (React mirrors them) and not subscribable.
 
 ---

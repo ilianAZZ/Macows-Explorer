@@ -44,7 +44,7 @@ Anything else is ignored with a `console.warn`.
 | `"file:modifier-open"` | `core.tabs` (ctrl/⌘-click a folder → open in a tab) |
 | `"directory:changed"` | `core.auto-refresh` (re-read list when the dir changes on disk) |
 | `"selection:changed"` | declarative panels reacting to the selection |
-| `"app:ready"` · `"file:middle-open"` · `"file:open-no-app"` · `"file:external-drop"` · `"sidebar:item-remove"` · `"webdav:accounts-changed"` | various |
+| `"app:ready"` · `"file:middle-open"` · `"file:open-no-app"` · `"file:external-drop"` · `"sidebar:item-remove"` | various (e.g. `com.webdav` removes a sidebar account on `sidebar:item-remove`) |
 
 For a worker module, `SandboxHost` subscribes on the EventBus and re-posts the payload
 over postMessage; for a built-in, `LocalHost` subscribes directly. Either way the
