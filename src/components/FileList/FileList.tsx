@@ -22,6 +22,8 @@ interface Props {
   onMoveItems?: (paths: string[], destPath: string) => void;
   /** Files dropped from outside the app (e.g. Finder) onto a folder. */
   onDropExternal?: (files: FileList, destPath: string) => void;
+  /** Start a native OS drag of items so dropping on Finder/other apps moves the real files. */
+  onNativeDrag?: (items: FileItem[]) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -51,7 +53,7 @@ const COLUMNS: { key: SortKey; label: string; className: string }[] = [
 
 export function FileList({
   files, selected, cutItems, sort, error, currentDir,
-  onSelect, onOpen, onSortChange, onModifierOpen, onMiddleClick, onMoveItems, onDropExternal,
+  onSelect, onOpen, onSortChange, onModifierOpen, onMiddleClick, onMoveItems, onDropExternal, onNativeDrag,
 }: Props) {
   const selectedPaths = new Set(selected.map((f) => f.path));
   const cutPaths = new Set(cutItems.map((f) => f.path));
@@ -98,12 +100,16 @@ export function FileList({
   const handleDragStart = useCallback(
     (e: React.DragEvent, item: FileItem) => {
       // Drag the whole selection if the dragged row is part of it; otherwise just this row.
-      const paths = selectedPaths.has(item.path) ? selected.map((f) => f.path) : [item.path];
+      const dragItems = selectedPaths.has(item.path) ? selected : [item];
+      const paths = dragItems.map((f) => f.path);
       dragPathsRef.current = paths;
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", paths.join("\n"));
+      e.dataTransfer.setData("text/plain", paths.join("\n")); // keeps the in-app folder-drop working
+      // Also start a NATIVE drag so dropping on Finder/another app moves the real
+      // files (not just their text paths) — the Finder behaviour.
+      onNativeDrag?.(dragItems);
     },
-    [selected, selectedPaths]
+    [selected, selectedPaths, onNativeDrag]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent, item: FileItem) => {

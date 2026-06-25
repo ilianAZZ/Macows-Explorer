@@ -9,6 +9,7 @@ import { SelectionStore } from "../stores/SelectionStore";
 import { ListingStore } from "../stores/ListingStore";
 import { ViewStore } from "../stores/ViewStore";
 import { ModuleRegistry } from "../module-registry/ModuleRegistry";
+import { DragService } from "../drag/DragService";
 
 /**
  * THE GATEWAY VOCABULARY. Every privileged operation a module (built-in OR
@@ -63,6 +64,7 @@ export function createCapabilityTable(): CapabilityTable {
     dialog: {
       prompt:  { permission: "dialog", run: ([opts]) => AppBridge.dialog.prompt(opts as Parameters<typeof AppBridge.dialog.prompt>[0]) },
       confirm: { permission: "dialog", run: ([opts]) => AppBridge.dialog.confirm(opts as Parameters<typeof AppBridge.dialog.confirm>[0]) },
+      choose:  { permission: "dialog", run: ([opts]) => AppBridge.dialog.choose(opts as Parameters<typeof AppBridge.dialog.choose>[0]) },
     },
     net: {
       request:  { permission: "network", run: ([opts]) => invoke("http_request", { req: opts }) },
@@ -94,8 +96,15 @@ export function createCapabilityTable(): CapabilityTable {
       activate: { permission: "navigation",  run: async ([item]) => ModuleRegistry.resolveOpen(item as FileItem) },
     },
     sys: {
-      homeDir:   { permission: "fs:read", run: () => invoke("get_home_dir") },
-      quickLook: { permission: "fs:read", run: ([p]) => invoke("quick_look", { path: p }) },
+      homeDir:     { permission: "fs:read", run: () => invoke("get_home_dir") },
+      quickLook:   { permission: "fs:read", run: ([p]) => invoke("quick_look", { path: p }) },
+      // Refresh the live Quick Look panel to a new path (no-op unless it is open).
+      previewUpdate: { permission: "fs:read", run: ([p]) => invoke("preview_update", { path: p }) },
+      // Launch Services "Open With": list apps for a file, open a file with one.
+      appsForFile: { permission: "fs:read", run: ([p]) => invoke("apps_for_file", { path: p }) },
+      openWith:    { permission: "fs:read", run: ([p, app]) => invoke("open_with", { path: p, appPath: app }) },
+      // Native OS file drag-out (drop on Finder/other apps moves the real files).
+      startDrag:   { permission: "fs:read", run: ([paths, icon]) => DragService.start(paths as string[], icon as string | undefined) },
     },
   };
 }

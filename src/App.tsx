@@ -9,6 +9,7 @@ import { EventBus } from "./core/event-bus/EventBus";
 import { Events } from "./core/event-bus/events";
 import { TabManager, type TabsSnapshot } from "./core/tab-manager/TabManager";
 import { FileSystemRegistry } from "./core/file-system/FileSystemRegistry";
+import { DragService } from "./core/drag/DragService";
 import { SelectionStore } from "./core/stores/SelectionStore";
 import { ClipboardStore } from "./core/stores/ClipboardStore";
 import { ListingStore } from "./core/stores/ListingStore";
@@ -128,6 +129,9 @@ export function App() {
     }),
     confirm: (options) => new Promise<boolean>((resolve) => {
       setDialogState({ type: "confirm", options, resolve });
+    }),
+    choose: (options) => new Promise<string | null>((resolve) => {
+      setDialogState({ type: "choose", options, resolve });
     }),
   }), []);
 
@@ -416,6 +420,7 @@ export function App() {
           onMiddleClick={handleMiddleClick}
           onMoveItems={handleMoveItems}
           onDropExternal={handleDropExternal}
+          onNativeDrag={(items) => DragService.startForItems(items)}
         />
 
         <Sidebar side="right" panels={rightPanels} panelProps={panelProps} />

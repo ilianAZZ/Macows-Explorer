@@ -24,6 +24,7 @@ const emptyNav: NavigationAPI = {
 const emptyDialog: DialogAPI = {
   prompt: () => Promise.resolve(null),
   confirm: () => Promise.resolve(false),
+  choose: () => Promise.resolve(null),
 };
 
 class AppBridgeClass {

@@ -83,10 +83,20 @@ export interface SandboxHostApi {
   dialog: {
     prompt(options: { message: string; placeholder?: string; defaultValue?: string }): Promise<unknown>;
     confirm(options: { message: string; detail?: string; destructive?: boolean }): Promise<unknown>;
+    /** Show a single-choice list. Resolves with the chosen option's value, or null. */
+    choose(options: { message: string; options: { label: string; value: string; detail?: string; icon?: string }[] }): Promise<unknown>;
   };
   sys: {
     homeDir(): Promise<unknown>;
     quickLook(path: string): Promise<unknown>;
+    /** Refresh an already-open Quick Look panel to preview `path` (else no-op). */
+    previewUpdate(path: string): Promise<unknown>;
+    /** Apps that can open a file (Launch Services), default flagged + first. */
+    appsForFile(path: string): Promise<unknown>;
+    /** Open a file with a specific application bundle path. */
+    openWith(path: string, appPath: string): Promise<unknown>;
+    /** Start a native OS file drag of `paths`, previewed by `icon` (data-URI/path). */
+    startDrag(paths: string[], icon?: string): Promise<unknown>;
   };
   /** Host-proxied HTTP (avoids CORS, gated by the `network` permission). */
   net: {
@@ -187,10 +197,15 @@ export function createHostProxy(t: Transport): SandboxHostApi {
     dialog: {
       prompt:  (options) => callHost("dialog", "prompt", [options]),
       confirm: (options) => callHost("dialog", "confirm", [options]),
+      choose:  (options) => callHost("dialog", "choose", [options]),
     },
     sys: {
       homeDir: () => callHost("sys", "homeDir", []),
       quickLook: (path) => callHost("sys", "quickLook", [path]),
+      previewUpdate: (path) => callHost("sys", "previewUpdate", [path]),
+      appsForFile: (path) => callHost("sys", "appsForFile", [path]),
+      openWith: (path, appPath) => callHost("sys", "openWith", [path, appPath]),
+      startDrag: (paths, icon) => callHost("sys", "startDrag", [paths, icon]),
     },
     net: {
       request: (options) => callHost("net", "request", [options]),

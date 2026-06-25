@@ -19,12 +19,12 @@ Every module — built-in or community — is the same shape: `export default de
 
 ## Documentation
 
-| File | What it covers |
-| --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | Layer diagram, core piece responsibilities, module auto-discovery |
-| [`docs/flows.md`](docs/flows.md) | Sequence diagrams: keyboard shortcut, mouse buttons, EventBus side effects |
-| [`docs/events.md`](docs/events.md) | Full event reference table, how to add events, community module events |
-| [`COMMUNITY_MODULES.md`](COMMUNITY_MODULES.md) | How to write, bundle, and distribute a community module |
+| File                                           | What it covers                                                             |
+| ---------------------------------------------- | -------------------------------------------------------------------------- |
+| [`docs/architecture.md`](docs/architecture.md) | Layer diagram, core piece responsibilities, module auto-discovery          |
+| [`docs/flows.md`](docs/flows.md)               | Sequence diagrams: keyboard shortcut, mouse buttons, EventBus side effects |
+| [`docs/events.md`](docs/events.md)             | Full event reference table, how to add events, community module events     |
+| [`COMMUNITY_MODULES.md`](COMMUNITY_MODULES.md) | How to write, bundle, and distribute a community module                    |
 
 ---
 
@@ -134,15 +134,15 @@ That's it — built-in modules are auto-discovered by Vite's glob import. No reg
 
 ### The `host` API (all async)
 
-| Group | What it gives you | Permission |
-| --- | --- | --- |
-| `host.fs.*` | `readDir`, `openItem`, `copyFiles`, `moveFiles`, `deleteItem`, `renameItem`, `createFile`, `createFolder` | `fs:read` / `fs:write` |
-| `host.board.*` | `readFiles`, `writeFiles(paths, "copy" \| "cut")` | `clipboard:read` / `clipboard:write` |
-| `host.nav.*` | `navigate`, `goBack`, `goForward`, `goUp` | `navigation` |
-| `host.tabs.*` | `openTab`, `openTabInBackground`, `isActive` | `navigation` |
-| `host.dialog.*` | `prompt(opts)` → `Promise<string \| null>`, `confirm(opts)` → `Promise<boolean>` | `dialog` |
-| `host.sys.homeDir()` | The user's home directory | `fs:read` |
-| `host.refresh()` | Re-read the current directory after a mutation | `fs:read` |
+| Group                | What it gives you                                                                                         | Permission                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `host.fs.*`          | `readDir`, `openItem`, `copyFiles`, `moveFiles`, `deleteItem`, `renameItem`, `createFile`, `createFolder` | `fs:read` / `fs:write`               |
+| `host.board.*`       | `readFiles`, `writeFiles(paths, "copy" \| "cut")`                                                         | `clipboard:read` / `clipboard:write` |
+| `host.nav.*`         | `navigate`, `goBack`, `goForward`, `goUp`                                                                 | `navigation`                         |
+| `host.tabs.*`        | `openTab`, `openTabInBackground`, `isActive`                                                              | `navigation`                         |
+| `host.dialog.*`      | `prompt(opts)` → `Promise<string \| null>`, `confirm(opts)` → `Promise<boolean>`                          | `dialog`                             |
+| `host.sys.homeDir()` | The user's home directory                                                                                 | `fs:read`                            |
+| `host.refresh()`     | Re-read the current directory after a mutation                                                            | `fs:read`                            |
 
 A command's handler receives a serializable `snapshot` of `{ selectedItems, currentDirectory, clipboard }`.
 

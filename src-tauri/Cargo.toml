@@ -33,6 +33,9 @@ native-tls = "0.2"
 keyring = "2"
 # Decode dropped-file bytes (Finder → app) passed from the WebView as base64.
 base64 = "0.22"
+# Native OS drag-out (NSDraggingSession with file URLs) so rows dragged to Finder
+# or another app carry the real files, not just their text paths.
+tauri-plugin-drag = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

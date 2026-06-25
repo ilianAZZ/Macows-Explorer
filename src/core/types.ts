@@ -90,11 +90,44 @@ export interface DialogConfirmOptions {
   destructive?: boolean;
 }
 
+/** One selectable row in a `choose` dialog. */
+export interface DialogChooseOption {
+  /** Primary text shown for the row. */
+  label: string;
+  /** The value `choose` resolves with when this row is picked. */
+  value: string;
+  /** Optional secondary line shown smaller (e.g. a file path). */
+  detail?: string;
+  /** Optional leading icon as an <img> src (data-URI or URL). */
+  icon?: string;
+}
+
+export interface DialogChooseOptions {
+  /** Main prompt shown above the list. */
+  message: string;
+  /** The rows to choose from. */
+  options: DialogChooseOption[];
+}
+
 export interface DialogAPI {
   /** Show a text-input dialog. Resolves with the entered string or null if cancelled. */
   prompt(options: DialogPromptOptions): Promise<string | null>;
   /** Show a yes/no confirmation dialog. Resolves with true (confirm) or false (cancel). */
   confirm(options: DialogConfirmOptions): Promise<boolean>;
+  /** Show a single-choice list. Resolves with the chosen option's value, or null if cancelled. */
+  choose(options: DialogChooseOptions): Promise<string | null>;
+}
+
+/** An application able to open a file — returned by the `sys.appsForFile` capability. */
+export interface AppInfo {
+  /** Display name, e.g. "Visual Studio Code". */
+  name: string;
+  /** Absolute bundle path, e.g. "/Applications/Visual Studio Code.app". */
+  path: string;
+  /** The app's icon as a base64 PNG data-URI (empty if unavailable). */
+  icon: string;
+  /** True for the app macOS would use by default for this file. */
+  isDefault: boolean;
 }
 
 // ─── View context ────────────────────────────────────────────────────────────

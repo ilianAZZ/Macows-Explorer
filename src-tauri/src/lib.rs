@@ -11,6 +11,7 @@ mod clipboard;
 mod fs_ops;
 mod http;
 mod icons;
+mod launch;
 mod modules;
 mod mouse_nav;
 mod preview;
@@ -23,13 +24,17 @@ use fs_ops::{
 };
 use http::{http_download, http_request, http_upload};
 use icons::icon_for_type;
+use launch::{apps_for_file, open_with};
 use modules::{list_user_modules, read_module_file};
-use preview::quick_look;
+use preview::{preview_update, quick_look};
 use secrets::{secret_delete, secret_get, secret_set};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Native OS file drag-out: dragging rows to Finder/another app moves the
+        // real files (NSDraggingSession with file URLs), not just their paths.
+        .plugin(tauri_plugin_drag::init())
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             #[cfg(target_os = "macos")]
@@ -52,9 +57,12 @@ pub fn run() {
             delete_item,
             open_item,
             icon_for_type,
+            apps_for_file,
+            open_with,
             get_home_dir,
             write_temp_file,
             quick_look,
+            preview_update,
             http_request,
             http_download,
             http_upload,

@@ -18,6 +18,8 @@ export interface EventMap {
   "navigation:forward": undefined;
   "file:modifier-open": { item: FileItem; modifiers: { ctrl: boolean; meta: boolean } };
   "file:middle-open": { item: FileItem };
+  /** A file was opened but no app claims it — the open-with module shows the picker. */
+  "file:open-no-app": { path: string; name: string };
   "module:registered": { moduleId: string };
   "module:unregistered": { moduleId: string };
   "error:action": { actionId: string; error: unknown };
@@ -55,6 +57,7 @@ export const Events = {
   File: {
     modifierOpen: "file:modifier-open",
     middleOpen: "file:middle-open",
+    openNoApp: "file:open-no-app",
   },
   Module: {
     registered: "module:registered",

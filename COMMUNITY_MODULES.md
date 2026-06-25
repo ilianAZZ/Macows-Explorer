@@ -84,15 +84,15 @@ export default {
 **`commands`** — entries surfaced into menus / shortcuts. You register the handler in
 `setup` with `host.onCommand(id, handler)`.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | `string` | Globally unique, `"module-id.command-name"`. |
-| `label` | `string` | Shown in menus. |
-| `icon` | `string?` | Icon-registry key (unknown keys render nothing). |
-| `shortcut` | `string?` | Normalized, e.g. `"meta+shift+d"`, `"f2"`. Last registration wins on conflict. |
-| `contextMenu` | `boolean?` | Show in the right-click menu. |
-| `contextMenuCategory` | `string?` | Group header. Use `"File" / "Edit" / "Selection" / "View" / "Share"` or any string. |
-| `when` | `WhenClause?` | Declarative visibility (below). |
+| Field                 | Type          | Notes                                                                               |
+| --------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `id`                  | `string`      | Globally unique, `"module-id.command-name"`.                                        |
+| `label`               | `string`      | Shown in menus.                                                                     |
+| `icon`                | `string?`     | Icon-registry key (unknown keys render nothing).                                    |
+| `shortcut`            | `string?`     | Normalized, e.g. `"meta+shift+d"`, `"f2"`. Last registration wins on conflict.      |
+| `contextMenu`         | `boolean?`    | Show in the right-click menu.                                                       |
+| `contextMenuCategory` | `string?`     | Group header. Use `"File" / "Edit" / "Selection" / "View" / "Share"` or any string. |
+| `when`                | `WhenClause?` | Declarative visibility (below).                                                     |
 
 The handler receives a serializable **snapshot**:
 `{ selectedItems: FileItem[], currentDirectory: string, clipboard: ClipboardState }`.
@@ -132,15 +132,15 @@ when: { clipboard: "hasItems" }   // e.g. a Paste command
 Every method is **async** (returns a Promise) and gated by the permission in the right
 column. Calling one without declaring its permission **throws**.
 
-| Capability | Methods | Permission |
-| --- | --- | --- |
-| `host.fs` | `readDir`, `openItem`, `copyFiles`, `moveFiles`, `deleteItem`, `renameItem`, `createFile`, `createFolder` | `fs:read` (reads/`openItem`) · `fs:write` (mutations) |
-| `host.board` | `readFiles`, `writeFiles(paths, "copy"\|"cut")` | `clipboard:read` / `clipboard:write` |
-| `host.nav` | `navigate`, `goBack`, `goForward`, `goUp` | `navigation` |
-| `host.tabs` | `openTab`, `openTabInBackground`, `isActive` | `navigation` |
-| `host.dialog` | `prompt`, `confirm` | `dialog` |
-| `host.sys` | `homeDir` | `fs:read` |
-| `host.refresh()` | re-read the current directory | `fs:read` |
+| Capability       | Methods                                                                                                   | Permission                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `host.fs`        | `readDir`, `openItem`, `copyFiles`, `moveFiles`, `deleteItem`, `renameItem`, `createFile`, `createFolder` | `fs:read` (reads/`openItem`) · `fs:write` (mutations) |
+| `host.board`     | `readFiles`, `writeFiles(paths, "copy"\|"cut")`                                                           | `clipboard:read` / `clipboard:write`                  |
+| `host.nav`       | `navigate`, `goBack`, `goForward`, `goUp`                                                                 | `navigation`                                          |
+| `host.tabs`      | `openTab`, `openTabInBackground`, `isActive`                                                              | `navigation`                                          |
+| `host.dialog`    | `prompt`, `confirm`                                                                                       | `dialog`                                              |
+| `host.sys`       | `homeDir`                                                                                                 | `fs:read`                                             |
+| `host.refresh()` | re-read the current directory                                                                             | `fs:read`                                             |
 
 Non-privileged helpers (no permission needed):
 - `host.onCommand(id, handler)` / `host.onOpen(handlerId, handler)` — register handlers.
@@ -171,11 +171,11 @@ The module loads on next launch into its own isolated worker.
 
 ## Module ID convention
 
-| Origin | Format | Example |
-| --- | --- | --- |
-| Community | `author.module-name` | `acme.git-status` |
-| Fork of existing | `author.original-name-fork` | `bob.clipboard-fork` |
-| Built-in (reserved) | `core.*` | `core.navigation` |
+| Origin              | Format                      | Example              |
+| ------------------- | --------------------------- | -------------------- |
+| Community           | `author.module-name`        | `acme.git-status`    |
+| Fork of existing    | `author.original-name-fork` | `bob.clipboard-fork` |
+| Built-in (reserved) | `core.*`                    | `core.navigation`    |
 
 IDs are permanent. **Never rename a module ID after users install it** — it breaks their install.
 

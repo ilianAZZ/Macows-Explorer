@@ -192,10 +192,23 @@ pub fn delete_item(path: String) -> Result<(), String> {
 #[tauri::command]
 pub fn open_item(path: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    std::process::Command::new("open")
-        .arg(&path)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    {
+        // A bundle (.app, …) is a directory that launches itself — always openable.
+        // A regular file with no associated app is reported back so the frontend can
+        // offer the "Open With" picker instead of macOS logging kLSApplicationNotFoundErr.
+        let is_bundle = std::path::Path::new(&path).is_dir();
+        if !is_bundle && !crate::launch::has_opener(&path) {
+            return Err(crate::launch::NO_OPENER_ERROR.into());
+        }
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+    }
     Ok(())
 }
 

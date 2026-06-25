@@ -4,8 +4,10 @@
 // deliberately — this is a trust surface.
 export const SUBSCRIBABLE_EVENTS = new Set<string>([
   "input:mouse-navigate",
+  "selection:changed",
   "file:modifier-open",
   "file:middle-open",
+  "file:open-no-app",
   "sidebar:item-remove",
   "webdav:accounts-changed",
 ]);

@@ -65,6 +65,14 @@ unsafe fn native_icon_data_uri(extension: Option<&str>, is_dir: bool, path: Opti
     Ok(format!("data:image/png;base64,{}", b64))
 }
 
+/// The native icon for a SPECIFIC path (e.g. an .app bundle) as a base64 PNG
+/// data-URI. Reused by the "Open With" picker for application icons. Returns None
+/// on failure; only meaningful on macOS.
+#[cfg(target_os = "macos")]
+pub(crate) fn path_icon_data_uri(path: &str) -> Option<String> {
+    unsafe { native_icon_data_uri(None, false, Some(path)).ok() }
+}
+
 /// Return the native macOS icon for a file type (by extension, or the generic
 /// folder icon when is_dir) as a base64 PNG data-URI. The frontend caches per
 /// extension; a module may override an extension with its own image.

@@ -86,6 +86,70 @@
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
+/* ─── Choose dialog — scrollable single-choice list (e.g. "Open With…") ──────── */
+.dialog-choices {
+  list-style: none;
+  margin: 4px 0 16px;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dialog-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: default;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+
+.dialog-choice:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.dialog-choice-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.dialog-choice-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dialog-choice-label {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialog-choice-detail {
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialog-choice:hover .dialog-choice-detail { color: rgba(255, 255, 255, 0.85); }
+
 .dialog-buttons {
   display: flex;
   gap: 8px;

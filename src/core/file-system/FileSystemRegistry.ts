@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { FileItem } from "../types";
 import { ViewStore } from "../stores/ViewStore";
+import { EventBus } from "../event-bus/EventBus";
+import { Events } from "../event-bus/events";
 
 // =============================================================================
 // FILE SYSTEM ROUTER
@@ -70,7 +72,18 @@ class FileSystemRegistryClass {
   async openItem(path: string): Promise<void> {
     const provider = this.providerFor(path);
     if (provider) return provider.openFile(path);
-    await invoke("open_item", { path });
+    try {
+      await invoke("open_item", { path });
+    } catch (err) {
+      // No app claims this file (e.g. .DS_Store). Report it so the open-with
+      // module can offer the picker, the way Finder does — not a hard failure.
+      if (String(err).includes("NO_OPENER")) {
+        const name = path.split("/").pop() || path;
+        EventBus.emit(Events.File.openNoApp, { path, name });
+        return;
+      }
+      throw err;
+    }
   }
 
   async createFolder(path: string): Promise<void> {
