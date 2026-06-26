@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GITHUB_URL } from "../layout.config";
+import { GITHUB_URL, DISCORD_URL } from "../layout.config";
 import { ModularBench } from "@/components/demo/ModularBench";
 
 const WHY = [
@@ -398,6 +398,14 @@ export default function HomePage() {
           >
             Star on GitHub
           </a>
+          <a
+            href={DISCORD_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-fd-border px-4 py-2 text-sm font-medium transition hover:bg-fd-muted"
+          >
+            Join the Discord
+          </a>
         </div>
       </section>
 
@@ -405,6 +413,10 @@ export default function HomePage() {
         Mutka · MIT licensed ·{" "}
         <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">
           GitHub
+        </a>{" "}
+        ·{" "}
+        <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+          Discord
         </a>
       </footer>
     </main>

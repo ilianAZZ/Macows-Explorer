@@ -1,11 +1,30 @@
-# Mutka
+<p align="center">
+  <img src="assets/logo-circle.png" alt="Mutka" width="120" />
+</p>
 
-> A community-driven, modular file explorer for macOS — built with Tauri 2, React 18 and the macOS 26 Liquid Glass design language.
+<h1 align="center">Mutka</h1>
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Tauri](https://img.shields.io/badge/Tauri-2-orange)
+<p align="center">
+  A community-driven, modular file explorer for macOS — built with Tauri 2, React 18 and the macOS 26 Liquid Glass design language.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/platform-macOS-lightgrey" alt="Platform" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+  <img src="https://img.shields.io/badge/Tauri-2-orange" alt="Tauri" />
+  <a href="https://discord.gg/RKecKnNYxc"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/explorer.png" alt="Mutka file explorer" width="800" />
+</p>
+
+---
+
+## Community
+
+Building a module, hit a snag, or want to share what you made? **[Join the Mutka Discord →](https://discord.gg/RKecKnNYxc)**
 
 ---
 

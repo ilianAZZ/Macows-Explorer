@@ -1,6 +1,7 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
 const GITHUB_URL = "https://github.com/ilianAZZ/mutka";
+const DISCORD_URL = "https://discord.gg/RKecKnNYxc";
 
 /**
  * Shared layout options used by both the marketing (home) layout and the docs
@@ -36,7 +37,12 @@ export const baseOptions: BaseLayoutProps = {
       url: "/docs",
       active: "nested-url",
     },
+    {
+      text: "Discord",
+      url: DISCORD_URL,
+      external: true,
+    },
   ],
 };
 
-export { GITHUB_URL };
+export { GITHUB_URL, DISCORD_URL };
