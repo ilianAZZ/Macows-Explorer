@@ -138,7 +138,7 @@ Two independent concerns, both optional — CI still builds installable bundles 
 mutka/
 ├── CLAUDE.md                    ← you are here (project overview)
 ├── INSTALL.md                   ← end-user install guide
-├── docs/                        ← architecture.md, flows.md, events.md, releasing.md
+├── docs/                        ← architecture.md, safety.md, flows.md, events.md, releasing.md
 │
 ├── dev-modules/                 ← repo-local community modules (DEV only)
 │   ├── com.dir-stats/index.js   ← example untrusted module, worker-loaded
