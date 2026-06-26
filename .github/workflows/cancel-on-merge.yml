@@ -1,0 +1,58 @@
+name: Cancel PR workflows on merge/close
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cancel-runs:
+    name: Cancel in-progress PR workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel workflow runs for this PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headBranch = context.payload.pull_request.head.ref;
+
+            console.log(`PR closed/merged. Cancelling in-progress runs on branch ${headBranch}...`);
+
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              branch: headBranch,
+              status: 'in_progress',
+            });
+
+            const queued = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              branch: headBranch,
+              status: 'queued',
+            });
+
+            const allRuns = [...runs.workflow_runs, ...queued.data.workflow_runs];
+
+            if (allRuns.length === 0) {
+              console.log('No runs to cancel.');
+              return;
+            }
+
+            for (const run of allRuns) {
+              if (run.id === context.runId) continue;
+
+              console.log(`Cancelling run #${run.id} (${run.name}) — status: ${run.status}`);
+              try {
+                await github.rest.actions.cancelWorkflowRun({ owner, repo, run_id: run.id });
+              } catch (err) {
+                console.log(`  Could not cancel run #${run.id}: ${err.message}`);
+              }
+            }
+
+            console.log('Done.');

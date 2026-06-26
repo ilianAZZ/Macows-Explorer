@@ -1,0 +1,142 @@
+name: Build & Deploy website
+
+# Builds the Next.js site in website/ into a Docker image, pushes it to GHCR,
+# then SSHes to the VPS to pull + run it via docker compose. Triggered on push
+# to main (or manually). Discord notifications bracket the run.
+
+on:
+  push:
+    branches:
+      - main
+    # Only rebuild when the site (or its deploy config) changes — not on every
+    # Tauri-app / docs commit. Remove this filter to deploy on every push.
+    paths:
+      - "website/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/_discord_notif.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+env:
+  DEPLOY_ENV: main
+  IMAGE: ghcr.io/ilianazz/mutka/web
+  APP_PATH: /data/apps/mutka.app/landing
+
+jobs:
+  notify-discord:
+    name: Notify Discord - Build started
+    uses: ./.github/workflows/_discord_notif.yml
+    with:
+      status: neutral
+      message:
+        "🚀 Build & Deploy started for **${{ github.repository }}** on **${{
+        github.ref_name }}** by **${{ github.actor }}**."
+    secrets: inherit
+
+  build:
+    runs-on: ubuntu-latest
+    needs: notify-discord
+    name: Build & push web image
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./website
+          file: ./website/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.DEPLOY_ENV }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  notify-discord-build-fail:
+    uses: ./.github/workflows/_discord_notif.yml
+    needs: build
+    if: failure()
+    with:
+      status: fail
+      message:
+        "❌ Build failed for **${{ github.repository }}** on **${{
+        github.ref_name }}**."
+    secrets: inherit
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose to VPS
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_PRIVATE_KEY }}" > ~/.ssh/temp_private_key
+          chmod 600 ~/.ssh/temp_private_key
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/temp_private_key -P ${{ secrets.VPS_PORT }} \
+            docker-compose.yml \
+            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${APP_PATH}/docker-compose.yml
+          rm -f ~/.ssh/temp_private_key
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          envs: APP_PATH,IMAGE,DEPLOY_ENV
+          script: |
+            set -e
+            export DEPLOY_ENV="${{ env.DEPLOY_ENV }}"
+
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ilianazz --password-stdin
+
+            echo "Pulling ${{ env.IMAGE }}:${{ env.DEPLOY_ENV }}..."
+            docker pull "${{ env.IMAGE }}:${{ env.DEPLOY_ENV }}"
+
+            cd "${{ env.APP_PATH }}"
+            # Use the pulled image only; never build on the VPS (no source there).
+            docker compose up -d --no-build --remove-orphans
+            docker image prune -f
+            echo "Deployed."
+
+  notify-discord-deploy:
+    name: Notify Discord - Deployment finished
+    needs: deploy
+    if: success()
+    uses: ./.github/workflows/_discord_notif.yml
+    with:
+      status: success
+      message:
+        "✅ Deployment finished for **${{ github.repository }}** on **${{
+        github.ref_name }}**."
+    secrets: inherit
+
+  notify-discord-deploy-fail:
+    name: Notify Discord - Deployment failed
+    needs: deploy
+    if: failure()
+    uses: ./.github/workflows/_discord_notif.yml
+    with:
+      status: fail
+      message:
+        "❌ Deployment failed for **${{ github.repository }}** on **${{
+        github.ref_name }}**."
+    secrets: inherit

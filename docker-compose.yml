@@ -1,0 +1,12 @@
+name: mutka.app
+
+services:
+  mutka.app-landing:
+    build:
+      context: ./website
+      dockerfile: Dockerfile
+    image: ghcr.io/ilianazz/mutka/web:${DEPLOY_ENV:-main}
+    container_name: mutka.app-landing
+    restart: always
+    ports:
+      - 9800:3000
