@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "../src/core/sandbox/defineModule.ts",
+    "../src/core/sandbox/hostProxy.ts",
+    "../src/core/module-registry/module-registry.types.ts",
+    "../src/core/types.ts"
+  ],
+  "tsconfig": "../tsconfig.json",
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-plugin-frontmatter",
+    "./typedoc-fumadocs.mjs"
+  ],
+  "out": "content/docs/api",
+  "readme": "none",
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "entryFileName": "index",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "useCodeBlocks": true,
+  "expandObjects": true,
+  "parametersFormat": "table",
+  "indexFormat": "table"
+}

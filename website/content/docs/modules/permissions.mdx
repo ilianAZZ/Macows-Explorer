@@ -1,0 +1,128 @@
+---
+title: Permissions & Capabilities
+description: The complete capability vocabulary and the permission each one requires — the one file that defines everything a module can do.
+---
+
+Every privileged operation a module can perform is a **capability**, and each
+capability requires a declared **permission**. The mapping lives in exactly one
+file —
+[`capabilities.ts`](https://github.com/ilianAZZ/mutka/blob/main/src/core/sandbox/capabilities.ts).
+**If an operation isn't listed there, no module can perform it.** To expose
+something new, you add it there and nowhere else.
+
+This page is the full reference. The narrative pages
+([virtual file systems](/docs/modules/virtual-file-system),
+[declarative UI](/docs/modules/declarative-ui),
+[storage/network/secrets](/docs/modules/storage-network-secrets)) explain the
+*why* behind each group.
+
+## The permission enum
+
+`ModulePermission` is the closed set a module may declare:
+
+| Permission        | Grants                                                         |
+| ----------------- | ------------------------------------------------------------- |
+| `fs:read`         | Read directory contents and file metadata/bytes               |
+| `fs:write`        | Create, modify, move, or delete files/directories             |
+| `fs:temp`         | Write a short-lived file to the OS temp dir (weaker than `fs:write`) |
+| `clipboard:read`  | Read clipboard contents                                       |
+| `clipboard:write` | Write to the native clipboard                                 |
+| `navigation`      | Change the active directory / drive tabs                      |
+| `view`            | Control view state: selection, sort, filters, home, settings  |
+| `dialog`          | Show prompts, confirmations, choosers                         |
+| `network`         | Make outbound (host-proxied) HTTP requests                    |
+| `storage`         | Read/write its own per-module persisted config                |
+| `secrets`         | Read/write its own credentials in the macOS Keychain          |
+| `ui`              | Render declarative panels/popups/settings + status-bar items  |
+| `shell`           | *Reserved — declared but no capability backs it yet*          |
+
+## Capability → permission map
+
+Every `host.*` call below is gated. `gateway.ts` checks the required permission
+against the module's manifest **before** running; if it's missing, the call
+throws — and for a worker (community) module the capability is *physically
+unreachable*, since the worker has no `invoke`.
+
+### Files & clipboard
+
+| Capability                                                                       | Permission        | Backed by                                  |
+| -------------------------------------------------------------------------------- | ----------------- | ------------------------------------------ |
+| `fs.readDir`, `fs.openItem`                                                       | `fs:read`         | FileSystemRegistry (local **or** provider) |
+| `fs.readBytes`                                                                    | `fs:read`         | Rust `read_file_base64` → `Uint8Array`     |
+| `fs.cloudStatus`                                                                  | `fs:read`         | Rust `cloud_status` (cloud-only vs local)  |
+| `fs.copyFiles` / `moveFiles` / `deleteItem` / `renameItem` / `createFile` / `createFolder` | `fs:write` | FileSystemRegistry                  |
+| `board.readFiles`                                                                 | `clipboard:read`  | Rust `clipboard_read_files`                |
+| `board.writeFiles`                                                                | `clipboard:write` | Rust `clipboard_write_files`               |
+
+### Navigation, tabs & view
+
+| Capability                                          | Permission   | Backed by                       |
+| --------------------------------------------------- | ------------ | ------------------------------- |
+| `nav.navigate` / `goBack` / `goForward` / `goUp`    | `navigation` | AppBridge                       |
+| `tabs.openTab` / `openTabInBackground` / `isActive` | `navigation` | TabManager                      |
+| `app.refresh`                                       | `fs:read`    | AppBridge                       |
+| `app.activate`                                      | `navigation` | ModuleRegistry (open pipeline)  |
+| `selection.set`                                     | `view`       | SelectionStore                  |
+| `view.setSort` / `toggleSort`                       | `view`       | ListingStore                    |
+| `view.toggleHidden` / `setShowHidden`               | `view`       | ViewStore                       |
+| `home.get`                                          | `fs:read`    | HomeStore (the app home dir)    |
+| `home.set`                                          | `view`       | HomeStore (any module may override) |
+| `settings.toggle`                                   | `view`       | SettingsStore (the overlay)     |
+
+### Dialogs & declarative UI
+
+| Capability                                  | Permission | Backed by                          |
+| ------------------------------------------- | ---------- | ---------------------------------- |
+| `dialog.prompt` / `confirm` / `choose`      | `dialog`   | AppBridge → `<Dialog>`             |
+| `ui.render` / `clear` / `modal`             | `ui`       | UIStore (UINode surfaces + modal)  |
+| `statusbar.set` / `remove`                  | `ui`       | StatusBarStore                     |
+
+### Storage, network & secrets
+
+| Capability                              | Permission | Backed by                                   |
+| --------------------------------------- | ---------- | ------------------------------------------- |
+| `config.get` / `set`                    | `storage`  | `localStorage`, namespaced per module       |
+| `secrets.get` / `set` / `delete`        | `secrets`  | Rust `secret_*` → macOS Keychain (per module) |
+| `net.request` / `download` / `upload`   | `network`  | Rust `http_*` (host-proxied, bypasses CORS) |
+
+### System
+
+| Capability                  | Permission | Backed by                                          |
+| --------------------------- | ---------- | -------------------------------------------------- |
+| `sys.homeDir`               | `fs:read`  | Rust `get_home_dir` (the OS home dir)              |
+| `sys.lastDir`               | `fs:read`  | `localStorage` (last dir, for launch restore)      |
+| `sys.writeTempFile`         | `fs:temp`  | Rust `write_temp_file` (OS temp dir only)          |
+| `sys.quickLook` / `previewUpdate` | `fs:read` | Rust Quick Look panel                          |
+| `sys.appsForFile` / `openWith`    | `fs:read` | Rust Launch Services ("Open With")             |
+| `sys.startDrag`             | `fs:read`  | DragService (native OS file drag-out)              |
+
+<Callout title="fs:temp is weaker than fs:write">
+  `fs:temp` writes only to the OS temp directory, so it is deliberately weaker
+  than `fs:write` — e.g. `core.drop-import` uses it to stage Finder drops before
+  copying them in, and `net.download` uses it to land a remote file.
+</Callout>
+
+## Why `when` is data, not a function
+
+A worker module can't hand a predicate across `postMessage`, so command and
+column **visibility is described declaratively** and evaluated host-side by
+[`whenClause.ts`](https://github.com/ilianAZZ/mutka/blob/main/src/core/sandbox/whenClause.ts).
+That's why `when: { selection: "single" }` is an object, not a callback (VS Code
+uses string when-clauses for the same reason). Multiple keys AND together.
+
+A command's `when.selection` accepts:
+
+| Value        | Visible when…                          |
+| ------------ | -------------------------------------- |
+| `any`        | always                                 |
+| `none`       | nothing is selected                    |
+| `some`       | one or more selected                   |
+| `single`     | exactly one item                       |
+| `multiple`   | two or more                            |
+| `singleDir`  | exactly one, a directory               |
+| `singleFile` | exactly one, a file                    |
+| `files`      | one+ and **all** are files             |
+| `dirs`       | one+ and **all** are directories       |
+
+`when.clipboard: "hasItems"` additionally gates on a non-empty clipboard (for a
+Paste command).

@@ -1,0 +1,95 @@
+---
+title: Columns & File Icons
+description: Add computed list-view columns and override file-type icons — declaratively, so the module only runs where it makes sense.
+---
+
+Two smaller contribution points let a module enrich the file list itself: custom
+**columns** (e.g. image dimensions, a cloud-sync badge) and **file-type icon**
+overrides (ship your own logo for an extension).
+
+## Custom columns
+
+A column has two parts: a **declarative applicability gate** (where it shows, and
+which rows get a value) and a **value provider** (the function that computes a
+cell). The split matters — see "Why two-level matching" below.
+
+```ts
+export default defineModule({
+  id: "com.exif",
+  permissions: ["fs:read"],
+  columns: [
+    {
+      id: "com.exif.dimensions",
+      label: "Dimensions",
+      width: 110,
+      align: "end",
+      // Directory-level gate: only show this column under ~/Pictures.
+      dirMatch: { pathPrefixes: ["~/Pictures"] },
+      // Item-level gate: only compute a value for image files.
+      cellMatch: { extensions: ["jpg", "png", "heic"] },
+    },
+  ],
+  setup(host) {
+    host.onColumn("com.exif.dimensions", async (item) => {
+      const { width, height } = await readImageSize(item.path);
+      return { text: `${width}×${height}` };   // a ColumnCell
+    });
+  },
+});
+```
+
+### Why two-level matching
+
+Both gates are **declarative** (no predicate crosses the worker wire) and they
+do different jobs:
+
+- `dirMatch` decides whether the **whole column** appears in the current
+  directory (`pathPrefixes` — a leading `~` is expanded host-side — or
+  `pathContains`). Omit it to show everywhere.
+- `cellMatch` decides which **items** get a computed value (it reuses the
+  open-handler match shape: `extensions`, `isDir`, `isPackage`). When it fails,
+  the cell is empty **and the value provider is never invoked for that item.**
+
+That last point is the reason for the split: an EXIF module should never be
+handed a `.txt` file to decode. The host filters first, so your provider only
+runs on inputs that make sense to it — cheaper and safer.
+
+### What a cell can render
+
+`onColumn` returns a `ColumnCell` (or `null` for empty). A cell is plain data,
+rendered via text and `<img src>` only:
+
+| Field   | Renders                                                       |
+| ------- | ------------------------------------------------------------ |
+| `text`  | The primary cell text                                        |
+| `icon`  | A `data:image/…;base64` icon (injection-safe `<img src>`)    |
+| `tint`  | Text colour — **must** be a `var(--…)` token, else dropped   |
+| `badge` | A short pill (e.g. `"⤓"`, `"3"`)                             |
+
+The provider runs in your module's runtime and the result is returned over the
+`column` round-trip, so it may be async (read bytes, hit the network, parse a file).
+
+<Callout title="See it in the dev modules">
+  [`com.image-dimensions`](https://github.com/ilianAZZ/mutka/blob/main/dev-modules/com.image-dimensions/index.js)
+  adds a dimensions column; [`com.cloud-status`](https://github.com/ilianAZZ/mutka/blob/main/dev-modules/com.cloud-status/index.js)
+  adds a sync-state badge using `fs.cloudStatus`.
+</Callout>
+
+## File-type icons
+
+A module can replace the native macOS icon for a set of extensions with its own
+logo:
+
+```ts
+export default defineModule({
+  id: "author.brand-icons",
+  fileIcons: [
+    { extensions: ["sketch"], image: "data:image/png;base64,iVBORw0K…" },
+  ],
+});
+```
+
+`image` is a `data:image/…;base64,…` URI, so it crosses the worker boundary as
+plain data and renders via `<img src>` **only — never `innerHTML`** — which keeps
+it injection-safe even for SVG images. No `setup` wiring is needed; the
+declaration is enough.

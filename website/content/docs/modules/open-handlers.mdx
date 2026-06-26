@@ -1,0 +1,41 @@
+---
+title: Open Handlers
+description: Intercept double-clicks to open files in a custom viewer or behaviour.
+---
+
+Open handlers let a module claim the double-click (open) behaviour for a set of
+items — e.g. open `.pdf` files in a custom viewer. You declare a serializable
+`match` and register the runner in `setup`.
+
+```ts
+export default defineModule({
+  id: "author.pdf-viewer",
+  permissions: ["navigation"],
+  openHandlers: [
+    {
+      id: "author.pdf-viewer.open-pdf",
+      priority: 10,                       // higher wins; core defaults sit at 0
+      match: { extensions: ["pdf"] },     // serializable matcher
+      handler: "open-pdf",
+    },
+  ],
+  setup(host) {
+    host.onOpen("open-pdf", (item) => {
+      host.tabs.openTab(item.path);
+    });
+  },
+});
+```
+
+## Resolution order
+
+```text
+User double-clicks an item
+  → ModuleRegistry.resolveOpen(item)
+  → each handler's match(item) is evaluated, highest priority wins
+  → the function registered via host.onOpen(...) runs
+  → default: core.navigation (priority 0) → folder→navigate, file→openItem
+```
+
+Because the core navigation defaults register at priority **0**, any community
+module can override them by declaring a higher priority.

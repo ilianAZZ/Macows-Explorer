@@ -1,0 +1,77 @@
+---
+title: Architecture
+description: One module format, two runtimes, one permission gateway — and how a command flows through them.
+---
+
+The core (`src/core/`) provides infrastructure only: the registry, the module
+runtime + permission gateway, the event bus, the shortcut manager, and the type
+definitions. The core **never** contains feature logic — no copy, no navigate,
+no rename. Feature logic lives in modules.
+
+## One format, two runtimes, one gateway
+
+```text
+                   One module format (defineModule)
+                           │             │
+   trusted built-ins       │             │      untrusted community
+            ▼              │             │               ▼
+   ┌──────────────────┐    │             │  ┌──────────────────────────┐
+   │ LocalHost        │    │             │  │ SandboxHost              │
+   │                  │    │             │  │                          │
+   │ in-process,      │    │             │  │  ╔═ Web Worker ════════╗ │
+   │ direct calls     │    │             │  │  ║ no DOM · no invoke  ║ │
+   │                  │    │             │  │  ║ no core reference   ║ │
+   └────────┬─────────┘    │             │  └──╚══════════╤══════════╝─┘
+            │              │             │                │
+            └──────────► dispatchCapability() ◄───────────┘
+                        ════════════════════
+                        THE GATEWAY (gateway.ts)
+                    required permission must be in
+                       the manifest, else throw
+                                 │
+                                 ▼
+                capabilities.ts — the ONLY code that
+             touches invoke() · AppBridge · TabManager
+```
+
+- **Built-ins run in-process** (`LocalHost`): isolation buys nothing and a worker
+  per module would waste memory. Still gated identically.
+- **Community modules run isolated** (`SandboxHost` → Web Worker): a denied
+  permission is physically unreachable — the worker has no `invoke`.
+- **`capabilities.ts` is the whole vocabulary.** If an operation isn't listed
+  there, no module can perform it.
+
+## How a command executes
+
+```text
+User presses ⌘C
+  → ShortcutManager normalises key → "meta+c"
+  → EventBus.emit("action:dispatch", { actionId: "core.clipboard.copy" })
+  → ModuleRegistry.executeAction(actionId): checks visibility, then runs it
+  → runtime.run(commandId, snapshot)        // selection / dir / clipboard
+  → the module's handler calls host.board.writeFiles(...)
+  → gateway checks "clipboard:write" → capabilities.ts → invoke("clipboard_write_files")
+  → EventBus.emit("clipboard:changed") refreshes the UI
+```
+
+## How a double-click resolves
+
+```text
+User double-clicks a folder
+  → ModuleRegistry.resolveOpen(item)
+  → first openHandler (sorted by priority desc) whose match(item) is true wins
+  → default: core.navigation priority 0 → folder→host.nav.navigate, file→host.fs.openItem
+  → a community module at higher priority can claim e.g. all .png files
+```
+
+## Where things live
+
+| Layer            | Folder                  | Responsibility                                        |
+| ---------------- | ----------------------- | ----------------------------------------------------- |
+| Core             | `src/core/`             | Registry, gateway, event bus, shortcuts, sandbox      |
+| Built-in modules | `src/sandbox-builtins/` | One file each, `defineModule` format                  |
+| UI components    | `src/components/`       | Presentational only — props in, callbacks out         |
+| Rust backend     | `src-tauri/`            | Thin FS/system API layer (all the Tauri commands)     |
+
+For the generated, type-level reference of the public module API, see the
+[API Reference](/docs/api).

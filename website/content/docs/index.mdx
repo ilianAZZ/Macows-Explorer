@@ -1,0 +1,65 @@
+---
+title: Getting Started
+description: What Mutka is, how to run it, and how its module system fits together.
+---
+
+Mutka is a **community-driven, modular file explorer for macOS**, built with
+Tauri 2 (Rust backend + native WebView), React 18 + TypeScript, and the macOS
+Liquid Glass design language.
+
+The design goal: ship a minimal, rock-solid **core** and let the community build
+everything else as **modules**. Even built-in features — copy/paste, file
+creation, navigation — are modules. The core provides infrastructure only.
+
+## Prerequisites
+
+| Tool                     | Version          |
+| ------------------------ | ---------------- |
+| Rust                     | stable (1.77.2+) |
+| Node.js                  | 18+              |
+| Xcode Command Line Tools | latest           |
+
+```bash
+xcode-select --install   # if not already installed
+```
+
+## Run it
+
+```bash
+git clone https://github.com/ilianAZZ/mutka.git
+cd mutka
+npm install
+npm run tauri dev        # opens the app window with hot-reload
+```
+
+<Callout title="First run is slow">
+  The very first `tauri dev` takes 3–5 minutes while Cargo downloads and
+  compiles Tauri. Subsequent runs are fast — under 5 s for Rust changes, instant
+  for TypeScript/CSS.
+</Callout>
+
+### Production build
+
+```bash
+npm run tauri build      # outputs a .app in src-tauri/target/release/bundle/
+```
+
+## The big idea
+
+A module — built-in or community — is the same shape:
+
+```ts
+export default defineModule({ id, name, version, permissions, commands, openHandlers, setup });
+```
+
+It **imports nothing from the core**. Inside `setup(host)` it receives a `host`
+object — its only way to reach the system. Every privileged call
+(`host.fs.*`, `host.nav.*`, `host.dialog.*`, …) is checked against the module's
+declared `permissions`.
+
+- **Built-in modules** run in-process (trusted).
+- **Community modules** run isolated in a Web Worker — a denied permission is not
+  just refused, it is *physically unreachable*.
+
+Continue with the [Architecture](/docs/architecture) overview, or jump straight to
+[Writing a module](/docs/modules/writing-a-module).

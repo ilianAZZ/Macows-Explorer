@@ -1,0 +1,127 @@
+---
+title: Virtual File Systems
+description: Serve a URI scheme (WebDAV, S3, an archive) as a browsable, editable file system — without the rest of the app knowing it isn't local disk.
+---
+
+The file source is **not hard-wired to the local disk**. A module can register a
+provider for a URI scheme (e.g. `webdav`, `nextcloud`, `s3`). Every directory
+listing, file open, and mutation is routed through one router —
+[`FileSystemRegistry`](https://github.com/ilianAZZ/mutka/blob/main/src/core/file-system/FileSystemRegistry.ts):
+a path that matches a registered scheme goes to that provider; anything else (a
+normal absolute path) goes to Rust.
+
+## Why it exists
+
+The whole point of Mutka is that *features* live in modules and the core stays
+small. A file explorer that could only ever browse the local disk would violate
+that — remote drives, cloud storage, and archives are exactly the kind of thing
+the community should be able to add. So the "where do bytes come from" question
+is itself a module boundary.
+
+The win: **the rest of the app never knows the difference.** The file list, the
+breadcrumb, copy/paste, drag-and-drop, the watcher — none of them special-case
+remote paths. They call `host.fs.*`, the router dispatches by scheme, and a
+WebDAV folder renders exactly like a local one. To add `sftp://` or `s3://` you
+write one module; **zero core changes.**
+
+## How routing works
+
+A path's scheme is parsed with `^([a-z][a-z0-9+.-]*):`. If it matches a
+registered provider, the operation goes there; otherwise it goes to the local
+disk via Rust.
+
+```text
+host.fs.readDir("webdav:acme/photos")   → provider "webdav" .list()
+host.fs.readDir("/Users/ada/photos")    → Rust read_dir
+```
+
+<Callout title="Routing is by destination for transfers">
+  `copyFiles` / `moveFiles` route on the **destination** path, not the source.
+  That is what lets a remote provider *upload*: copying a local file into a
+  `webdav:` directory hands the local source paths to the provider's copy
+  handler, which PUTs the bytes. A move of a local file to a remote dir uploads
+  then deletes the local original. Renaming *across* two different file systems
+  is rejected — there's no in-place move between disks.
+</Callout>
+
+## The provider contract
+
+A provider implements up to eight operations. You register each one in `setup`
+with a `host.on*` hook, keyed by your scheme. Declare the scheme(s) up front in
+`fileSystemProviders` so the host knows to route them.
+
+| Hook                          | Handles                                          |
+| ----------------------------- | ------------------------------------------------ |
+| `host.onList(scheme, fn)`     | List a directory → `FileItem[]`                  |
+| `host.onOpenFile(scheme, fn)` | Open a single file                               |
+| `host.onCreateFolder(…)`      | `mkdir` (throw if read-only)                     |
+| `host.onCreateFile(…)`        | Create an empty file                             |
+| `host.onDeleteItem(…)`        | Delete a file or folder                          |
+| `host.onRenameItem(…)`        | Rename / move within the same scheme             |
+| `host.onCopyFiles(…)`         | Copy sources into a dir (local sources = upload) |
+| `host.onMoveFiles(…)`         | Move same-scheme sources into a dir              |
+
+A read-only provider simply throws from the write hooks (or omits them). Only
+implement what your backend supports.
+
+## A minimal read-only provider
+
+```ts
+export default defineModule({
+  id: "author.archive",
+  name: "Zip Browser",
+  permissions: ["fs:read", "network"],   // whatever your backend needs
+  fileSystemProviders: ["zip"],          // declare the scheme(s) you own
+  setup(host) {
+    host.onList("zip", async (path) => {
+      // path looks like "zip:<archiveId>/inner/dir"
+      const entries = await readZipDir(path);
+      return entries.map((e) => ({
+        name: e.name,
+        path: `${path.replace(/\/$/, "")}/${e.name}`,
+        isDir: e.isDir,
+        // …other FileItem fields
+      }));
+    });
+    host.onOpenFile("zip", async (path) => {
+      await extractAndOpen(path);
+    });
+  },
+});
+```
+
+Once registered, navigating to `zip:my-archive/` lists its contents in the
+normal file list, breadcrumbs work, double-click opens — all for free.
+
+## Both runtimes, one caveat
+
+Providers work in **both** runtimes. A built-in calls its handlers in-process; a
+community module serves each operation over a worker round-trip (`provider`
+message → `provider-result`, see
+[`protocol.ts`](https://github.com/ilianAZZ/mutka/blob/main/src/core/sandbox/protocol.ts)).
+
+<Callout type="warn" title="The worker realm has no DOM">
+  A community provider runs in a Web Worker, which lacks `DOMParser`, `window`,
+  and the like. The reference WebDAV module used to be a built-in *only* because
+  it parsed PROPFIND XML with `DOMParser`; it now ships a tiny string-based XML
+  parser so it can run isolated like any other module. If your provider genuinely
+  needs DOM APIs, ship it as a built-in instead.
+</Callout>
+
+## Worked example: WebDAV
+
+The
+[`com.webdav`](https://github.com/ilianAZZ/mutka/blob/main/dev-modules/com.webdav/index.js)
+dev module proves the whole story end-to-end. It registers the `webdav` scheme
+where a virtual path is `webdav:<accountId>/path` — one server account per id.
+
+- **Browsing** = `PROPFIND`, **opening** = download, **create / rename / delete**
+  = `MKCOL` / `PUT` / `MOVE` / `DELETE`, all via [`host.net`](/docs/modules/storage-network-secrets).
+- **Accounts** (`{ id, name, url, username }`) live in per-module
+  [`config`](/docs/modules/storage-network-secrets); each **password** lives in the
+  macOS Keychain via `secrets` — never plaintext.
+- It renders its own **Settings → WebDAV** section (a [declarative UI](/docs/modules/declarative-ui)
+  surface) to manage accounts, and contributes left-sidebar "Places" entries.
+
+That single file adds remote, editable cloud storage with credential management
+and a settings UI — and the core didn't change at all.

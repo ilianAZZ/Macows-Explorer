@@ -1,0 +1,77 @@
+---
+title: Events & File Watching
+description: The narrow set of app events a module may subscribe to, and how directory watching works (and why it's current-directory-only).
+---
+
+A module reacts to the world through `host.events.on(event, handler)`. The set
+of events it may subscribe to is a **whitelist** — kept deliberately narrow.
+
+## Why the whitelist
+
+The list of subscribable events is a **trust surface**. A module should only
+receive notifications it has a legitimate reason to act on, and nothing carrying
+sensitive state. So subscriptions are checked against an explicit set in
+[`eventWhitelist.ts`](https://github.com/ilianAZZ/mutka/blob/main/src/core/sandbox/eventWhitelist.ts);
+anything not listed is simply not deliverable. New entries are added
+deliberately, not by default.
+
+## Subscribable events
+
+| Event                    | Fires when…                                              |
+| ------------------------ | ------------------------------------------------------- |
+| `app:ready`              | All modules registered + AppBridge connected (the launch hook) |
+| `directory:changed`      | The current directory's contents changed on disk        |
+| `selection:changed`      | The user's file selection changed                       |
+| `input:mouse-navigate`   | A back/forward mouse button was pressed                 |
+| `file:modifier-open`     | A file was opened with a modifier (⌘/⇧) held            |
+| `file:middle-open`       | A file was opened with the middle mouse button          |
+| `file:open-no-app`       | An item was opened but no app claims it (offer a picker) |
+| `file:external-drop`     | Files were dropped in from Finder                       |
+| `sidebar:item-remove`    | The user removed one of this module's sidebar items     |
+
+```ts
+setup(host) {
+  host.events.on("directory:changed", () => {
+    // re-read state, re-render a panel, etc.
+  });
+}
+```
+
+<Callout title="app:ready is the launch hook">
+  `app:ready` is emitted only after every loader resolves **and** AppBridge is
+  connected — so subscriptions are wired and `host.nav.*` reaches real React
+  state. The built-in `core.home` listens for it to resolve the home directory
+  and run the first navigation. Do app-startup work here, not at module top
+  level.
+</Callout>
+
+## How directory watching works
+
+The host watches **only the directory currently in view** — not the whole disk,
+and not arbitrary module-requested paths.
+
+```text
+Rust FSEvents watcher (one, re-armed on each navigation)
+  → emits "directory-changed"
+  → core/file-watch/DirectoryWatcher.ts debounces it
+  → re-broadcasts as the whitelisted "directory:changed" event
+  → core.auto-refresh re-reads the list; your module reacts too
+```
+
+### Why current-directory-only
+
+Two reasons, one cost and one correctness:
+
+- **Bounded cost.** There is exactly one watcher. `read_dir` re-arms it on every
+  navigation (unwatch old + watch new on a persistent watcher) instead of
+  dropping and recreating it — dropping a macOS FSEvents watcher joins its
+  run-loop thread, which previously stalled *every* listing. Modules cannot
+  request their own watchers, so the watching cost can never grow with the
+  number of modules.
+- **Listing is never blocked by watching.** Rendering folder content is the
+  priority, so the re-arm runs on a detached thread. `Access` events are ignored
+  so that merely *reading* a directory can't loop back into a refresh.
+
+The practical consequence for module authors: you get notified about changes to
+the folder the user is looking at, which is what a file explorer actually needs.
+If you need to know about other locations, poll them yourself with `host.fs.readDir`.

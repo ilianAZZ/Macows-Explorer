@@ -1,0 +1,718 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Tailwind v4 needs to scan Fumadocs UI for the classes it uses. */
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+:root {
+  --mutka-accent: #0a84ff;
+}
+
+/* ============================================================= *
+ *  CODE SYNTAX TOKENS                                            *
+ *  Hand-picked colours that read well on both the light and     *
+ *  dark Liquid-Glass code cards. Used by the homepage snippet.  *
+ * ============================================================= */
+.tok-key { color: #bf5af2; font-weight: 600; }   /* keywords: export, default */
+.tok-fn { color: #0a84ff; margin-left: 10px; }                       /* function calls */
+.tok-prop { color: #ff9f0a; }                     /* object keys */
+.tok-str { color: #30a46c; }                      /* strings */
+.tok-num { color: #ff7b72; }                      /* numbers */
+.tok-com { color: var(--color-fd-muted-foreground); font-style: italic; }
+.tok-punc { color: var(--color-fd-muted-foreground); }
+:is(.dark) .tok-str { color: #3fd07f; }
+:is(.dark) .tok-fn { color: #5ac8fa; }
+:is(.dark) .tok-key { color: #d79cff; }
+
+.code-card {
+  position: relative;
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--mutka-accent) 8%, transparent), transparent 55%),
+    var(--color-fd-card);
+}
+
+/* ---- accented feature cards ------------------------------------ */
+.accent-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 1rem;
+  background:
+    radial-gradient(130% 100% at 0% 0%, color-mix(in srgb, var(--ac) 12%, transparent), transparent 60%),
+    var(--color-fd-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.accent-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--ac) 45%, var(--color-fd-border));
+  box-shadow: 0 16px 40px -24px var(--ac);
+}
+.accent-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ac), transparent);
+}
+.accent-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  font-size: 19px;
+  color: #fff;
+  background: linear-gradient(140deg, var(--ac), color-mix(in srgb, var(--ac) 60%, #000));
+  box-shadow: 0 6px 16px -8px var(--ac);
+}
+
+/* ============================================================= *
+ *  "WHY" SPEC SHEET — divided columns, no boxes, each guarantee  *
+ *  proven by one line of code. Distinct from the card grids.     *
+ * ============================================================= */
+.spec {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--color-fd-border);
+}
+@media (min-width: 768px) {
+  .spec {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.spec-col {
+  position: relative;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--color-fd-border);
+}
+@media (min-width: 768px) {
+  .spec-col {
+    padding: 0.25rem 1.6rem 1.4rem;
+    border-bottom: none;
+  }
+  .spec-col + .spec-col {
+    border-left: 1px solid var(--color-fd-border);
+  }
+  .spec-col:first-child {
+    padding-left: 0;
+  }
+  .spec-col:last-child {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .spec-col:first-child::before {
+    top: 0;
+  }
+}
+.spec-kick {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 1.1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ac);
+}
+.spec-kick em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 14%, transparent);
+}
+.spec-title {
+  margin-top: 0.7rem;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.spec-body {
+  margin-top: 0.55rem;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-fd-muted-foreground);
+}
+.spec-proof {
+  display: block;
+  margin-top: 1.1rem;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--color-fd-border);
+  border-left: 2px solid var(--ac);
+  background: color-mix(in srgb, var(--ac) 5%, var(--color-fd-card));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* ---- numbered "how it works" steps ----------------------------- */
+.step-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(140deg, var(--ac), color-mix(in srgb, var(--ac) 55%, #000));
+  box-shadow: 0 6px 16px -9px var(--ac);
+}
+
+/* ============================================================= *
+ *  "CRAZY IDEAS" — rendered as the product itself: a mock Mutka  *
+ *  window browsing ~/.mutka/modules/. Each wild idea is a file   *
+ *  row, not a generic card. On-theme, not the usual emoji grid.  *
+ * ============================================================= */
+.mod-browser {
+  display: grid;
+  /* one shared set of column tracks for the whole listing, so every row's
+     columns line up — the Permission track is sized to the widest tag */
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.9fr) auto;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-fd-card);
+  box-shadow: 0 28px 60px -34px rgba(0, 0, 0, 0.45);
+}
+.mod-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px;
+  background: color-mix(in srgb, var(--color-fd-muted-foreground) 6%, var(--color-fd-card));
+  border-bottom: 1px solid var(--color-fd-border);
+}
+.mod-lights {
+  display: flex;
+  gap: 7px;
+}
+.mod-lights i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: block;
+}
+.mod-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--color-fd-muted-foreground);
+}
+.mod-path b {
+  color: var(--color-fd-foreground);
+  font-weight: 600;
+}
+.mod-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--color-fd-muted-foreground);
+}
+
+.mod-head,
+.mod-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+}
+.mod-head {
+  height: 31px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-fd-muted-foreground);
+  border-bottom: 1px solid var(--color-fd-border);
+}
+.mod-row {
+  position: relative;
+  min-height: 60px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-fd-border) 55%, transparent);
+  transition: background 0.18s ease;
+}
+.mod-row:last-child {
+  border-bottom: none;
+}
+.mod-row:hover {
+  background: color-mix(in srgb, var(--ac) 9%, transparent);
+}
+.mod-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ac);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.mod-row:hover::before {
+  opacity: 1;
+}
+
+.mod-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+/* file-type style badge — short label, not an emoji */
+.mod-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(150deg, var(--ac), color-mix(in srgb, var(--ac) 52%, #000));
+  box-shadow: 0 6px 15px -8px var(--ac);
+}
+.mod-name {
+  min-width: 0;
+}
+.mod-name b {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fd-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mod-name span {
+  font-size: 11px;
+  color: var(--color-fd-muted-foreground);
+}
+.mod-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-fd-muted-foreground);
+}
+.mod-tag {
+  justify-self: end;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ac) 28%, transparent);
+}
+
+/* the inviting last row — your module goes here */
+.mod-row--ghost .mod-ico {
+  background: none;
+  color: var(--ac);
+  border: 1.5px dashed color-mix(in srgb, var(--ac) 55%, transparent);
+  box-shadow: none;
+}
+.mod-row--ghost .mod-name b {
+  color: var(--ac);
+}
+
+@media (max-width: 640px) {
+  .mod-head,
+  .mod-row {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+  .mod-desc,
+  .mod-head .mod-desc-h {
+    display: none;
+  }
+}
+
+/* ---- pill badges (hero) ---------------------------------------- */
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.5rem;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ac) 35%, var(--color-fd-border));
+  background: color-mix(in srgb, var(--ac) 9%, transparent);
+  color: color-mix(in srgb, var(--ac) 75%, var(--color-fd-foreground));
+}
+.hero-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ac);
+}
+
+/* ============================================================= *
+ *  INTERACTIVE MODULAR BENCH                                     *
+ *  A small live Mutka window with icon "module" tiles you plug   *
+ *  in and out; the affected region of the window pulses and a    *
+ *  short label says what changed.                                *
+ * ============================================================= */
+
+.bench-stage {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 1rem 2.5rem;
+  overflow: hidden;
+}
+.bench-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(currentColor 1px, transparent 1.3px);
+  background-size: 28px 28px;
+  color: color-mix(in srgb, var(--color-fd-muted-foreground) 16%, transparent);
+  -webkit-mask-image: radial-gradient(58% 55% at 50% 42%, #000, transparent 75%);
+  mask-image: radial-gradient(58% 55% at 50% 42%, #000, transparent 75%);
+}
+
+.bench-hint {
+  margin: 0 auto 2rem;
+  max-width: 30rem;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-fd-muted-foreground);
+}
+
+.bench {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.bench-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.75rem, 3vw, 2.25rem);
+}
+.bench-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.bench-core {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- module tile: icon + colour only --------------------------- */
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 86px;
+  padding: 9px 6px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.25s, transform 0.25s, background 0.25s;
+}
+.tile:hover { opacity: 1; background: color-mix(in srgb, var(--color-fd-muted-foreground) 8%, transparent); }
+.tile--on { opacity: 1; transform: translateY(-1px); }
+
+.tile-ico {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 21px;
+  color: var(--color-fd-muted-foreground);
+  background: color-mix(in srgb, var(--color-fd-muted-foreground) 14%, transparent);
+  transition: background 0.3s, color 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+.tile--on .tile-ico {
+  color: #fff;
+  background: linear-gradient(140deg, var(--c), color-mix(in srgb, var(--c) 60%, #000));
+  box-shadow: 0 8px 22px -8px var(--c), 0 0 0 4px color-mix(in srgb, var(--c) 18%, transparent);
+  transform: scale(1.03);
+}
+.tile-name {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--color-fd-muted-foreground);
+  transition: color 0.25s;
+}
+.tile--on .tile-name { color: var(--color-fd-foreground); font-weight: 600; }
+
+.bench-auto {
+  display: block;
+  margin: 1.5rem auto 0;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--color-fd-muted-foreground);
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-fd-border);
+  background: var(--color-fd-card);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.bench-auto:hover {
+  color: var(--color-fd-foreground);
+  border-color: color-mix(in srgb, var(--mutka-accent) 50%, transparent);
+}
+
+/* ============================================================= *
+ *  MOCK MUTKA WINDOW (Liquid Glass, compact)                    *
+ * ============================================================= */
+.mw {
+  --mw-bg: #ffffff;
+  --mw-chrome: rgba(247, 247, 249, 0.9);
+  --mw-text: rgba(0, 0, 0, 0.85);
+  --mw-dim: rgba(0, 0, 0, 0.48);
+  --mw-line: rgba(0, 0, 0, 0.09);
+  --mw-side: rgba(244, 244, 247, 0.72);
+  --mw-sel: #0a84ff;
+  --mw-stripe: rgba(0, 0, 0, 0.022);
+  width: 100%;
+  max-width: 448px;
+  height: 336px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 13px;
+  overflow: hidden;
+  color: var(--mw-text);
+  background: var(--mw-bg);
+  border: 1px solid var(--mw-line);
+  box-shadow: 0 36px 70px -30px rgba(0, 0, 0, 0.5), 0 10px 24px -16px rgba(0, 0, 0, 0.3);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.45s, color 0.45s, border-color 0.45s;
+}
+.mw--dark {
+  --mw-bg: #1c1c20;
+  --mw-chrome: rgba(38, 38, 44, 0.94);
+  --mw-text: rgba(255, 255, 255, 0.9);
+  --mw-dim: rgba(255, 255, 255, 0.48);
+  --mw-line: rgba(255, 255, 255, 0.1);
+  --mw-side: rgba(30, 30, 35, 0.82);
+  --mw-stripe: rgba(255, 255, 255, 0.03);
+}
+
+.mw-tabs { display: flex; gap: 5px; padding: 5px 9px 0; background: var(--mw-chrome); flex: none; }
+.mw-tab {
+  font-size: 11px;
+  padding: 3px 11px;
+  border-radius: 6px 6px 0 0;
+  color: var(--mw-dim);
+  background: color-mix(in srgb, var(--mw-text) 6%, transparent);
+}
+.mw-tab--on { color: var(--mw-text); background: var(--mw-bg); font-weight: 600; }
+
+.mw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 13px;
+  background: var(--mw-chrome);
+  border-bottom: 1px solid var(--mw-line);
+  flex: none;
+}
+.mw-lights { display: flex; gap: 6px; }
+.mw-lights i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.mw-crumb { font-size: 12px; font-weight: 500; }
+.mw-crumb b { color: var(--mw-dim); font-weight: 400; padding: 0 2px; }
+
+.mw-body { display: grid; grid-template-columns: 132px 1fr; flex: 1; min-height: 0; }
+.mw-side { background: var(--mw-side); border-right: 1px solid var(--mw-line); padding: 9px 7px; }
+.mw-side-h {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mw-dim);
+  padding: 3px 7px;
+}
+.mw-side ul { list-style: none; margin: 0 0 5px; padding: 0; }
+.mw-side-i {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  padding: 4px 7px;
+  border-radius: 6px;
+}
+.mw-side-i--on { background: color-mix(in srgb, var(--mw-sel) 22%, transparent); }
+.mw-side-i i { width: 14px; height: 14px; border-radius: 4px; flex: none; background: var(--mw-dim); opacity: 0.6; }
+.mw-side-i .d-home { background: #0a84ff; opacity: 1; }
+.mw-side-i .d-docs { background: #5ac8fa; opacity: 1; }
+.mw-side-i .d-down { background: #30d158; opacity: 1; }
+.mw-side-i .d-cloud { background: #0a84ff; opacity: 1; border-radius: 50% 50% 50% 4px; }
+
+.mw-list { display: flex; flex-direction: column; }
+.mw-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  height: 28px;
+  font-size: 12px;
+}
+.mw-row.cols-x { grid-template-columns: minmax(0, 1.5fr) 1fr 1fr auto; }
+.mw-row:nth-child(even):not(.mw-head) { background: var(--mw-stripe); }
+.mw-head {
+  height: 25px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--mw-dim);
+  border-bottom: 1px solid var(--mw-line);
+}
+.mw-row--sel { background: var(--mw-sel) !important; color: #fff; }
+.c-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mw-fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-kind, .c-date { color: var(--mw-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mw-row--sel .c-kind, .mw-row--sel .c-date, .mw-row--sel .c-size { color: rgba(255, 255, 255, 0.85); }
+.c-size { color: var(--mw-dim); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* document file icon: a little tinted card with a folded corner + extension */
+.mw-doc {
+  flex: none;
+  position: relative;
+  width: 16px;
+  height: 19px;
+  border-radius: 2.5px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--doc) 55%, #fff), var(--doc));
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+.mw-doc::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  border-top-right-radius: 2.5px;
+}
+.mw-doc b { font-size: 5.5px; font-weight: 800; letter-spacing: 0.03em; color: #fff; }
+
+/* folder icon */
+.mw-folder {
+  flex: none;
+  position: relative;
+  width: 19px;
+  height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(165deg, #7fccff, #0a84ff);
+}
+.mw-folder::before {
+  content: "";
+  position: absolute;
+  top: -2.5px;
+  left: 1px;
+  width: 8px;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background: #7fccff;
+}
+
+/* live image thumbnail (contributed by the Media module) */
+.mw-thumb {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  border-radius: 3px;
+  background: conic-gradient(from 210deg, #ff375f, #ff9f0a, #bf5af2, #5ac8fa, #ff375f);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+/* the "no Media module" state: a featureless grey square for every file */
+.mw-blank {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--mw-dim) 32%, transparent);
+}
+
+.mw-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 25px;
+  padding: 0 13px;
+  font-size: 10.5px;
+  color: var(--mw-dim);
+  background: var(--mw-chrome);
+  border-top: 1px solid var(--mw-line);
+  flex: none;
+}
+.mw-status-group { display: flex; align-items: center; gap: 7px; border-radius: 6px; }
+.mw-status-dot { opacity: 0.45; }
+.mw-status-acc { color: #ff9f0a; font-weight: 700; }
+
+/* ---- enter + pulse for changed regions ------------------------- */
+.mw-mount { animation: mw-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes mw-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+.mw-hot {
+  border-radius: 7px;
+  animation: mw-hot 1.5s ease;
+}
+@keyframes mw-hot {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--hot) 70%, transparent); }
+  25% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--hot) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ---- responsive ------------------------------------------------ */
+@media (max-width: 820px) {
+  .bench-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+  .bench-core { order: -1; }
+  .bench-rail { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+@media (max-width: 460px) {
+  .mw-side { display: none; }
+  .mw-body { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bench-pill, .mw-hot, .mw-mount { animation: none; }
+}

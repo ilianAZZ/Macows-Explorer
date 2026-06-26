@@ -1,0 +1,152 @@
+---
+title: Declarative UI
+description: How a sandboxed module renders panels, settings, modals, forms, and status-bar items — as serializable data, not React.
+---
+
+A worker module cannot hand a React component across `postMessage`, and even a
+trusted built-in shouldn't be drawing raw pixels into the app's chrome. So a
+module describes its UI as **data**: a serializable `UINode` tree. The host
+renders it natively with Liquid Glass widgets
+([`components/Declarative/`](https://github.com/ilianAZZ/mutka/tree/main/src/components/Declarative)).
+Modules never inject markup, CSS, or components — only JSON.
+
+## Why data, not components
+
+VS Code uses string when-clauses for visibility because a function can't be
+serialized; Mutka extends the same idea to the whole UI. Three reasons:
+
+1. **It has to cross a worker boundary.** A community module lives in a Web
+   Worker — the only thing it can send is structured-clone-safe data. A `UINode`
+   tree is exactly that.
+2. **It's safe by construction.** The host renders text via text nodes and
+   images via `<img src>` only — never `innerHTML`. A malicious or buggy module
+   cannot inject script or break out of its surface. Colours must be `var(--…)`
+   design tokens; anything else is dropped, so a module can't even fight the
+   theme.
+3. **It stays native.** Because the host owns rendering, every module's UI
+   automatically looks like macOS, follows dark mode, and matches the rest of
+   the app — the module author writes zero CSS.
+
+The trade-off is a deliberately **small vocabulary** (no custom layout or
+animation). The node set widens only as real modules need it.
+
+## The four surfaces
+
+The same `UINode` tree fills any of four places. You declare the surface, then
+fill it from `setup` with `host.ui.render(surfaceId, node)`.
+
+| Surface              | Declare                                            | Fill / open                          |
+| -------------------- | ------------------------------------------------- | ------------------------------------ |
+| Side-pane **panel**  | `panels: [{ id, title, icon, side?, defaultWidth? }]` | `host.ui.render(id, node)`           |
+| **Settings** section | `settingsSections: [{ id, title }]`               | `host.ui.render(id, node)`           |
+| App-wide **modal**   | — (no declaration)                                | `host.ui.modal(node)` / `modal(null)` |
+| Status-bar **popover** | a `StatusBarItem` whose `onClick` is `{ popover: surfaceId }` | `host.ui.render(surfaceId, node)` |
+
+All of this requires the `ui` permission. `host.ui.clear(surfaceId)` empties a
+surface.
+
+## The node vocabulary
+
+A `UINode` is one of (see
+[`protocol.ts`](https://github.com/ilianAZZ/mutka/blob/main/src/core/sandbox/protocol.ts)):
+
+| Node       | Purpose                                                            |
+| ---------- | ----------------------------------------------------------------- |
+| `vstack` / `hstack` | Layout containers (`gap`, `align`, `children`)           |
+| `text`     | A label (`weight`, `size`, `muted`, `tint`)                       |
+| `row`      | A label/value pair with an optional icon                          |
+| `button`   | Fires `action` (with optional `value`); `variant` for intent      |
+| `list`     | Rows; clicking a row fires its `action` with `value` (or its `id`) |
+| `badge`    | A small coloured pill                                              |
+| `icon`     | An icon-registry key                                              |
+| `image`    | An image — `src` **must** be a `data:image/…` URI                 |
+| `divider` / `spacer` | Visual spacing                                          |
+| `form`     | A form from a `FormSchema` (see below)                            |
+
+```ts
+const node = {
+  type: "vstack",
+  gap: 8,
+  children: [
+    { type: "text", text: "Folder stats", weight: "bold", size: "lg" },
+    { type: "row", label: "Files", value: "128" },
+    { type: "row", label: "Total size", value: "4.2 MB" },
+    { type: "button", label: "Recalculate", action: "recalc", variant: "primary" },
+  ],
+};
+host.ui.render("stats-panel", node);
+```
+
+## Interactions: `onUIEvent`
+
+A button click, a list-row click, or a form submit carries an `action` id you
+registered with `host.onUIEvent(id, handler)`. The host routes the event back
+into your module's runtime (`ModuleRegistry.dispatchUIEvent` → a `ui-event`
+message for worker modules).
+
+```ts
+setup(host) {
+  host.onUIEvent("recalc", async () => {
+    const node = await buildStatsNode();
+    host.ui.render("stats-panel", node);   // re-render with fresh data
+  });
+}
+```
+
+<Callout title="A panel has no direct read of the current directory">
+  Declarative surfaces are stateless from the host's side. A panel that needs to
+  react to navigation must track state from the [whitelisted events](/docs/modules/events-and-watching)
+  it subscribes to (e.g. `directory:changed`, `selection:changed`) and re-render
+  itself with `host.ui.render`.
+</Callout>
+
+## Forms
+
+A `form` node carries a `FormSchema` — a **JSON-Schema Draft-7 subset**, the
+standard, serializable wire format. The host renders each property as a text
+input, number input, checkbox, or (with `enum`) a select, and on submit fires
+the form's `action` with the collected values object.
+
+```ts
+const form = {
+  type: "form",
+  action: "save-account",
+  submitLabel: "Save",
+  schema: {
+    type: "object",
+    required: ["url", "username"],
+    properties: {
+      url:      { type: "string", title: "Server URL", format: "path" },
+      username: { type: "string", title: "Username" },
+      password: { type: "string", title: "Password", format: "password" },
+    },
+  },
+};
+```
+
+`format` hints rendering: `password` masks, `textarea` goes multiline. Authors
+can **generate** the schema from zod (`z.toJSONSchema()` or `zod-to-json-schema`)
+and re-validate the returned values with the same zod schema — the host never
+imports zod, it only renders the shape.
+
+## Status-bar items
+
+Status-bar items are dynamic — upserted with `host.statusbar.set(item)` and
+removed with `host.statusbar.remove(id)` (both gated by `ui`). An item can show
+text, an icon, a coloured `badge`, and a tooltip, and pin to either `side`.
+Clicking it either runs a command (`onClick: { command: id }`) or opens a
+popover rendering a UI surface (`onClick: { popover: surfaceId }`).
+
+```ts
+host.statusbar.set({
+  id: "branch",
+  icon: "git-branch",
+  text: "main",
+  badge: "↑2",
+  side: "left",
+  onClick: { popover: "git-popover" },
+});
+```
+
+This is how a module ships something like a git-branch widget — a live indicator
+in the chrome plus a click-through detail view, all as data.

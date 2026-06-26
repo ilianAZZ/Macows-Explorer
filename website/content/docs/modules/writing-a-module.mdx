@@ -1,0 +1,91 @@
+---
+title: Writing a Module
+description: Create a built-in or community module with defineModule and the host API.
+---
+
+A module is a plain ESM file that default-exports `defineModule({ ... })`. A
+built-in lives at `src/sandbox-builtins/<name>.ts`; a community module is
+byte-identical but drops the import and lives on disk at
+`~/.mutka/modules/<id>/index.js`.
+
+## A minimal module
+
+```ts
+import { defineModule } from "../core/sandbox/defineModule";
+
+export default defineModule({
+  id: "author.my-module",
+  name: "My Module",
+  version: "1.0.0",
+  permissions: ["dialog"],              // declare every capability host.* uses
+  commands: [
+    {
+      id: "author.my-module.hello",     // must start with the module ID
+      label: "Say Hello",
+      shortcut: "meta+shift+h",
+      contextMenu: true,
+      when: { selection: "any" },       // serializable visibility
+    },
+  ],
+  setup(host) {
+    host.onCommand("author.my-module.hello", async (snapshot) => {
+      await host.dialog.confirm({
+        message: `Hello from ${snapshot.currentDirectory}!`,
+      });
+    });
+  },
+});
+```
+
+That's it — built-in modules are auto-discovered by Vite's glob import. No
+registration step required.
+
+## The `host` API (all async)
+
+| Group              | What it gives you                                                                                         | Permission                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `host.fs.*`        | `readDir`, `openItem`, `copyFiles`, `moveFiles`, `deleteItem`, `renameItem`, `createFile`, `createFolder` | `fs:read` / `fs:write`               |
+| `host.board.*`     | `readFiles`, `writeFiles(paths, "copy" \| "cut")`                                                          | `clipboard:read` / `clipboard:write` |
+| `host.nav.*`       | `navigate`, `goBack`, `goForward`, `goUp`                                                                  | `navigation`                         |
+| `host.tabs.*`      | `openTab`, `openTabInBackground`, `isActive`                                                               | `navigation`                         |
+| `host.dialog.*`    | `prompt(opts)` → `Promise<string \| null>`, `confirm(opts)` → `Promise<boolean>`                           | `dialog`                             |
+| `host.sys.homeDir` | The user's OS home directory                                                                               | `fs:read`                            |
+| `host.refresh()`   | Re-read the current directory after a mutation                                                            | `fs:read`                            |
+
+A command's handler receives a serializable `snapshot` of
+`{ selectedItems, orderedItems, currentDirectory, clipboard }`.
+
+The table above is just the basics. The full `host` surface also covers
+network, per-module storage, Keychain secrets, view/selection control, and the
+system integrations (Quick Look, "Open With", native drag-out) — see the
+[capability reference](/docs/modules/permissions) for everything.
+
+<Callout type="warn" title="Declare before you call">
+  If a `host.*` call needs a permission you didn't list in `permissions`, the
+  gateway throws. For worker (community) modules the capability is physically
+  unreachable — the worker has no `invoke`.
+</Callout>
+
+## Beyond commands
+
+A module isn't limited to commands and open handlers. It can contribute, each as
+its own declarative entry plus an optional `setup` hook:
+
+- A whole [**virtual file system**](/docs/modules/virtual-file-system) for a URI
+  scheme (`fileSystemProviders`) — remote/cloud/archive storage.
+- [**Declarative UI**](/docs/modules/declarative-ui): side panels, settings
+  sections, modals, forms, and status-bar items (`panels`, `settingsSections`,
+  `host.ui.*`, `host.statusbar.*`).
+- Custom list [**columns and file icons**](/docs/modules/columns-and-icons)
+  (`columns`, `fileIcons`).
+- Left-sidebar "Places" entries (`sidebarItems` / `host.sidebar.set`).
+
+## What's next
+
+- [Permissions & capabilities](/docs/modules/permissions) — the full vocabulary
+- [Open handlers](/docs/modules/open-handlers) — claim a double-click
+- [Virtual file systems](/docs/modules/virtual-file-system) — serve a scheme
+- [Declarative UI](/docs/modules/declarative-ui) — render panels and forms
+- [Columns & file icons](/docs/modules/columns-and-icons) — enrich the list
+- [Events & file watching](/docs/modules/events-and-watching) — react to changes
+- [Storage, network & secrets](/docs/modules/storage-network-secrets)

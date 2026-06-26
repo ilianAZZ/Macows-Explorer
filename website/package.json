@@ -1,0 +1,33 @@
+{
+  "name": "mutka-website",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mutka marketing site + documentation (Next.js + Fumadocs)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "fumadocs-mdx",
+    "docs:api": "typedoc && node -e \"require('fs').writeFileSync('content/docs/api/meta.json', JSON.stringify({title:'API Reference',description:'Auto-generated type reference for the Mutka module API.'},null,2))\""
+  },
+  "dependencies": {
+    "fumadocs-core": "^16.0.0",
+    "fumadocs-mdx": "^11.6.0",
+    "fumadocs-ui": "^16.0.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-frontmatter": "^1.1.0",
+    "typedoc-plugin-markdown": "^4.4.0",
+    "typescript": "^5.7.0"
+  }
+}

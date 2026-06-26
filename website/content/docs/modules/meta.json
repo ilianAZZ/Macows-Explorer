@@ -1,0 +1,13 @@
+{
+  "title": "Modules",
+  "pages": [
+    "writing-a-module",
+    "permissions",
+    "open-handlers",
+    "virtual-file-system",
+    "declarative-ui",
+    "columns-and-icons",
+    "events-and-watching",
+    "storage-network-secrets"
+  ]
+}

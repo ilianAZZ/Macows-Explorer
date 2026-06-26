@@ -48,6 +48,17 @@ The UI follows macOS 26 "Liquid Glass" design. See `src/STYLE_GUIDE.md`.
 All colors live in CSS variables. Never hardcode a color.
 Dark mode follows the system (+ user override stored in localStorage).
 
+### 6. Docs are part of the public API — keep them in sync
+
+Because modules are built by people outside this repo, the docs ARE a contract.
+**Whenever you change an interface, type, capability, permission, event, Tauri command,
+the `host`/`defineModule` shape, the host ↔ worker protocol, or any architectural flow,
+update the matching documentation in the SAME change** — root `CLAUDE.md`, the per-directory
+`CLAUDE.md` files, and `docs/{architecture,flows,events}.md`. Never leave docs stale, and
+grep for any renamed symbol so no old name survives. Run the `update-docs` skill — it maps
+each kind of change to the file(s) that document it. Purely internal refactors (no shape
+change) need no doc update.
+
 ---
 
 ## Tech stack
