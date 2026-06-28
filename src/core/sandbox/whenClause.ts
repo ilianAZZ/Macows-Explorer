@@ -9,6 +9,18 @@ import type { WhenClause, ColumnDirMatch } from "./protocol";
 export function evaluateWhen(when: WhenClause, ctx: BaseContext): boolean {
   if (when.selection && !matchSelection(when.selection, ctx)) return false;
   if (when.clipboard === "hasItems" && ctx.clipboard.items.length === 0) return false;
+  // fileNames / extensions require a non-empty selection where EVERY item matches.
+  if (when.fileNames) {
+    const ok = ctx.selectedItems.length > 0 && ctx.selectedItems.every((i) => when.fileNames!.includes(i.name));
+    if (!ok) return false;
+  }
+  if (when.extensions) {
+    const exts = when.extensions.map((e) => e.toLowerCase());
+    const ok =
+      ctx.selectedItems.length > 0 &&
+      ctx.selectedItems.every((i) => !i.isDir && exts.includes((i.extension ?? "").toLowerCase()));
+    if (!ok) return false;
+  }
   return true;
 }
 

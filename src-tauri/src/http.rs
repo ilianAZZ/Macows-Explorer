@@ -212,8 +212,19 @@ fn read_response(resp: ureq::Response) -> Result<HttpResponse, String> {
 /// One request, one response: redirects are NOT followed (the agent has
 /// `.redirects(0)`), so a 3xx is returned to the module as-is. That keeps the URL
 /// the module asked for the only one ever fetched, all of it tier-checked here.
+///
+/// `async` + `spawn_blocking`: ureq is a BLOCKING client, and a synchronous Tauri
+/// command runs on the main thread — so doing the network call inline would freeze
+/// the whole UI until it returns (e.g. while the GitHub catalog loads). Offloading
+/// to the blocking pool keeps the window responsive.
 #[tauri::command]
-pub fn http_request(req: HttpRequestArgs) -> Result<HttpResponse, String> {
+pub async fn http_request(req: HttpRequestArgs) -> Result<HttpResponse, String> {
+    tauri::async_runtime::spawn_blocking(move || http_request_blocking(req))
+        .await
+        .map_err(|e| format!("HTTP task failed: {}", e))?
+}
+
+fn http_request_blocking(req: HttpRequestArgs) -> Result<HttpResponse, String> {
     use base64::Engine;
 
     check_url_allowed(&req.url, req.allow_public, req.allow_local)?;

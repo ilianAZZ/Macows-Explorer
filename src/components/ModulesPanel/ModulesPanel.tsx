@@ -1,12 +1,35 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ModuleManager } from "../../module-manager/ModuleManager";
 import { DiscoveryRegistry } from "../../module-manager/DiscoveryRegistry";
+import { probeManifest } from "../../module-manager/probeManifest";
 import type { ModuleListing, ResolvedModule } from "../../module-manager/types";
+import type { SandboxManifest } from "../../core/sandbox/protocol";
+import { ModulesStore } from "../../core/stores/ModulesStore";
+import { ModuleRegistry } from "../../core/module-registry/ModuleRegistry";
+import { EventBus } from "../../core/event-bus/EventBus";
+import { Events } from "../../core/event-bus/events";
+import { ICON_REGISTRY } from "../ContextMenu/icon-registry";
 import { useModules } from "../../hooks/useModules";
 import { InstalledList } from "./InstalledList";
 import { BrowseCatalog } from "./BrowseCatalog";
 import { InstallReviewDialog } from "./InstallReviewDialog";
 import "./ModulesPanel.css";
+
+/** A synthetic listing for a raw source (local file / module-proposed install). */
+function localListing(manifest: SandboxManifest): ModuleListing {
+  return {
+    sourceId: "local",
+    ref: manifest.id,
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    icon: manifest.icon,
+    author: (manifest.author ?? null) as ModuleListing["author"],
+    permissions: manifest.permissions,
+    tags: manifest.tags,
+  };
+}
 
 interface ModulesPanelProps {
   onClose: () => void;
@@ -33,6 +56,16 @@ export function ModulesPanel({ onClose }: ModulesPanelProps) {
 
   const installedIds = useMemo(() => new Set(modules.map((m) => m.id)), [modules]);
 
+  // Buttons modules contribute to this overlay (e.g. "Import local file"). Refresh
+  // when modules register/unregister.
+  const [mmButtons, setMmButtons] = useState(() => ModuleRegistry.getModuleManagerButtons());
+  useEffect(() => {
+    const refresh = () => setMmButtons(ModuleRegistry.getModuleManagerButtons());
+    const u1 = EventBus.on(Events.Module.registered, refresh);
+    const u2 = EventBus.on(Events.Module.unregistered, refresh);
+    return () => { u1(); u2(); };
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !installing) {
@@ -43,6 +76,25 @@ export function ModulesPanel({ onClose }: ModulesPanelProps) {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose, review, installing]);
+
+  // A module (e.g. the Local Installer) asked to install a raw source: probe it and
+  // open the same permission-review dialog the Browse install uses.
+  useEffect(() => {
+    const handle = async () => {
+      const source = ModulesStore.takePendingInstall();
+      if (!source) return;
+      try {
+        const manifest = await probeManifest(source);
+        setReviewError(null);
+        setReview({ source, manifest, listing: localListing(manifest) });
+      } catch (err) {
+        setActionError(`Could not load the selected module: ${String(err instanceof Error ? err.message : err)}`);
+      }
+    };
+    void handle(); // covers the overlay being opened *by* the request
+    const unsub = EventBus.on(Events.ModulesUi.installRequested, () => void handle());
+    return unsub;
+  }, []);
 
   const handleToggle = useCallback(async (id: string) => {
     setBusyId(id);
@@ -132,11 +184,30 @@ export function ModulesPanel({ onClose }: ModulesPanelProps) {
               onDelete={handleDelete}
             />
           ) : (
-            <BrowseCatalog
-              installedIds={installedIds}
-              busyRef={busyRef}
-              onInstall={handleInstallClick}
-            />
+            <>
+              {mmButtons.length > 0 && (
+                <div className="modules-mm-buttons">
+                  {mmButtons.map((b) => {
+                    const Icon = b.icon ? ICON_REGISTRY[b.icon] : undefined;
+                    return (
+                      <button
+                        key={`${b.moduleId}:${b.id}`}
+                        className="modules-mm-button"
+                        onClick={() => ModuleRegistry.dispatchUIEvent(b.moduleId, b.id, null)}
+                      >
+                        {Icon && <Icon size={14} strokeWidth={1.8} />}
+                        {b.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <BrowseCatalog
+                installedIds={installedIds}
+                busyRef={busyRef}
+                onInstall={handleInstallClick}
+              />
+            </>
           )}
         </div>
       </div>
@@ -144,6 +215,7 @@ export function ModulesPanel({ onClose }: ModulesPanelProps) {
       {review && (
         <InstallReviewDialog
           resolved={review}
+          installedVersion={modules.find((m) => m.id === review.manifest.id)?.version ?? null}
           installing={installing}
           error={reviewError}
           onConfirm={handleConfirmInstall}

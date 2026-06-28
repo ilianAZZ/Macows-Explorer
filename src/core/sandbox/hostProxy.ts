@@ -93,6 +93,8 @@ export interface SandboxHostApi {
     confirm(options: { message: string; detail?: string; destructive?: boolean }): Promise<unknown>;
     /** Show a single-choice list. Resolves with the chosen option's value, or null. */
     choose(options: { message: string; options: { label: string; value: string; detail?: string; icon?: string }[] }): Promise<unknown>;
+    /** Open a Mutka file browser to pick one file. Resolves with its path, or null. */
+    pickFile(options?: { title?: string; initialDir?: string; fileNames?: string[] }): Promise<unknown>;
   };
   /** The app's home directory store (distinct from the OS home, sys.homeDir). */
   home: {
@@ -147,10 +149,13 @@ export interface SandboxHostApi {
   net: {
     request(options: NetRequestOptions): Promise<unknown>;
   };
-  /** Module tooling for discovery sources (gated by the `discovery` permission). */
+  /** Module tooling (gated by the `discovery` permission). */
   modules: {
     /** Validate an ESM source in a throwaway worker and return its manifest. */
     probe(source: string): Promise<unknown>;
+    /** Propose a module source for install — opens the permission-review dialog so
+     *  the user approves before anything is written. */
+    install(source: string): Promise<unknown>;
   };
   /** Per-module persisted config (gated by the `storage` permission). */
   config: {
@@ -259,6 +264,7 @@ export function createHostProxy(t: Transport): SandboxHostApi {
       prompt:  (options) => callHost("dialog", "prompt", [options]),
       confirm: (options) => callHost("dialog", "confirm", [options]),
       choose:  (options) => callHost("dialog", "choose", [options]),
+      pickFile: (options) => callHost("dialog", "pickFile", [options]),
     },
     home: {
       get: () => callHost("home", "get", []),
@@ -291,6 +297,7 @@ export function createHostProxy(t: Transport): SandboxHostApi {
     },
     modules: {
       probe: (source) => callHost("modules", "probe", [source]),
+      install: (source) => callHost("modules", "install", [source]),
     },
     config: {
       get: (key) => callHost("config", "get", [key]),

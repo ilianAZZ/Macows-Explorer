@@ -1,0 +1,68 @@
+.filepicker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, black 32%, transparent);
+}
+
+.filepicker {
+  width: 760px;
+  max-width: 92vw;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  /* The app window is transparent (vibrancy), so the modal needs its own opaque
+     glass surface — same treatment as <Dialog>. */
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.84) 100%);
+  backdrop-filter: blur(64px) saturate(200%) brightness(1.04);
+  -webkit-backdrop-filter: blur(64px) saturate(200%) brightness(1.04);
+  border: 1px solid var(--rim-bright, var(--border));
+  border-radius: var(--r-lg, 12px);
+  box-shadow: var(--shadow-float, 0 24px 60px color-mix(in srgb, black 40%, transparent));
+  overflow: hidden;
+}
+
+[data-theme="dark"] .filepicker {
+  background: linear-gradient(160deg, rgba(45, 45, 52, 0.97) 0%, rgba(35, 35, 42, 0.95) 100%);
+}
+
+.filepicker-header {
+  padding: 13px 16px 9px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* Outer spacing around the shared FileBrowser shell (mirrors #app's padding). */
+.filepicker .file-browser {
+  padding: 0 12px;
+  min-height: 0;
+}
+
+/* The breadcrumb sits in the card header (FileBrowser header slot). */
+.filepicker-breadcrumb {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filepicker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.filepicker-cancel,
+.filepicker-select {
+  padding: 6px 14px;
+  border-radius: var(--r-sm, 6px);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+.filepicker-cancel { background: var(--bg); color: var(--text); }
+.filepicker-select { background: var(--accent); color: var(--accent-text, white); border-color: transparent; }
+.filepicker-select:disabled { opacity: 0.45; cursor: default; }

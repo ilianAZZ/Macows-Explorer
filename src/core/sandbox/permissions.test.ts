@@ -12,6 +12,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: (cmd: string, args?: unknown) =
 vi.mock("@crabnebula/tauri-plugin-drag", () => ({ startDrag: vi.fn() }));
 
 import { dispatchCapability } from "./gateway";
+import { ModulesStore } from "../stores/ModulesStore";
 import type { SandboxManifest } from "./protocol";
 import type { ModulePermission } from "../module-registry/module-registry.types";
 
@@ -31,6 +32,7 @@ function manifest(permissions: ModulePermission[], id = "test.module"): SandboxM
     panels: [],
     settingsSections: [],
     discoverySources: [],
+    moduleManagerButtons: [],
   };
 }
 
@@ -101,6 +103,35 @@ describe("network permissions", () => {
       { url: "https://example.com" },
     ]);
     expect(lastHttpReq()).toMatchObject({ allowPublic: true, allowLocal: true });
+  });
+});
+
+// ─── dialog.pickFile is gated by the dialog permission ───────────────────────
+describe("dialog.pickFile permission", () => {
+  it("denies dialog.pickFile without the dialog permission", async () => {
+    await expect(
+      dispatchCapability(manifest([]), "dialog", "pickFile", [{ fileNames: ["index.js"] }])
+    ).rejects.toThrow(/Permission denied/);
+  });
+
+  it("allows it with the dialog permission (resolves via the AppBridge stub)", async () => {
+    // No App connected in the test → AppBridge's empty provider resolves null.
+    const result = await dispatchCapability(manifest(["dialog"]), "dialog", "pickFile", [{}]);
+    expect(result).toBeNull();
+  });
+});
+
+// ─── modules.install is gated by discovery, and routes to the review flow ─────
+describe("modules.install permission", () => {
+  it("denies modules.install without discovery", async () => {
+    await expect(
+      dispatchCapability(manifest([]), "modules", "install", ["export default {}"])
+    ).rejects.toThrow(/Permission denied/);
+  });
+
+  it("allows it with discovery and queues the source for the review dialog", async () => {
+    await dispatchCapability(manifest(["discovery"]), "modules", "install", ["export default {id:'x'}"]);
+    expect(ModulesStore.takePendingInstall()).toBe("export default {id:'x'}");
   });
 });
 

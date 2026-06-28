@@ -46,36 +46,8 @@ body {
   background: rgba(18, 18, 21, 0.88);
 }
 
-/* Right pane: a floating rounded card holding the toolbar over the file content. */
-#main-col {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  border: 0.5px solid var(--rim-mid);
-  box-shadow: var(--shadow-panel);
-  background: rgba(248, 248, 250, 0.98);
-}
-
-[data-theme="dark"] #main-col {
-  background: rgba(26, 26, 28, 0.99);
-}
-
-/* The file content row (file list + any right sidebar). */
-#content-row {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-#content-row #file-list {
-  min-width: 0;
-}
+/* The main-column card and content row moved to components/FileBrowser/FileBrowser.css
+   (the .file-browser shell, shared by the main window and the file picker). */
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 7px; height: 7px; }

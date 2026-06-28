@@ -9,6 +9,8 @@ import { Events } from "../event-bus/events";
  */
 class ModulesStoreClass {
   private _open = false;
+  /** A module source awaiting the install-review dialog (set by requestInstall). */
+  private _pendingInstall: string | null = null;
 
   /** Whether the module-manager overlay is currently shown. */
   get open(): boolean {
@@ -23,6 +25,25 @@ class ModulesStoreClass {
 
   toggle(): void {
     this.setOpen(!this._open);
+  }
+
+  /**
+   * Ask the overlay to review + install a raw module source (e.g. a local index.js
+   * a module read from disk). Opens the overlay and signals ModulesPanel, which
+   * probes the source and shows the permission-review dialog. Consumed once via
+   * takePendingInstall().
+   */
+  requestInstall(source: string): void {
+    this._pendingInstall = source;
+    this.setOpen(true); // emit is a no-op if already open; the event below drives it
+    EventBus.emit(Events.ModulesUi.installRequested);
+  }
+
+  /** Consume the pending install source (returns it once, then clears it). */
+  takePendingInstall(): string | null {
+    const source = this._pendingInstall;
+    this._pendingInstall = null;
+    return source;
   }
 }
 

@@ -58,6 +58,9 @@ export interface EventMap {
   "settings:changed": { open: boolean };
   /** Emitted by ModulesStore when the module-manager overlay opens or closes. */
   "modules-ui:changed": { open: boolean };
+  /** A module asked to install a raw source; ModulesPanel reviews it. Host-internal
+   *  (not module-subscribable). */
+  "modules-ui:install-requested": undefined;
   /** A module's declarative UI surface (panel/settings/popover/modal) changed. */
   "ui:changed": { moduleId: string; surfaceId: string };
   /** A module added/removed/updated a bottom status-bar item. */
@@ -140,6 +143,7 @@ export const Events = {
   },
   ModulesUi: {
     changed: "modules-ui:changed",
+    installRequested: "modules-ui:install-requested",
   },
   Ui: {
     changed: "ui:changed",

@@ -10,6 +10,7 @@ import { ListingStore } from "../stores/ListingStore";
 import { ViewStore } from "../stores/ViewStore";
 import { HomeStore } from "../stores/HomeStore";
 import { SettingsStore } from "../stores/SettingsStore";
+import { ModulesStore } from "../stores/ModulesStore";
 import { UIStore } from "../stores/UIStore";
 import { StatusBarStore } from "../stores/StatusBarStore";
 import { ModuleRegistry } from "../module-registry/ModuleRegistry";
@@ -150,6 +151,7 @@ export function createCapabilityTable(): CapabilityTable {
       prompt:  { permission: "dialog", run: ([opts]) => AppBridge.dialog.prompt(opts as Parameters<typeof AppBridge.dialog.prompt>[0]) },
       confirm: { permission: "dialog", run: ([opts]) => AppBridge.dialog.confirm(opts as Parameters<typeof AppBridge.dialog.confirm>[0]) },
       choose:  { permission: "dialog", run: ([opts]) => AppBridge.dialog.choose(opts as Parameters<typeof AppBridge.dialog.choose>[0]) },
+      pickFile:{ permission: "dialog", run: ([opts]) => AppBridge.dialog.pickFile(opts as Parameters<typeof AppBridge.dialog.pickFile>[0]) },
     },
     net: {
       // One role per command: a network request sends/receives bytes, it never
@@ -163,6 +165,10 @@ export function createCapabilityTable(): CapabilityTable {
     // into listing metadata; the worker spin-up stays in the host.
     modules: {
       probe: { permission: "discovery", run: ([source]) => probeManifest(source as string) },
+      // Hand a module source to the install flow. It opens the Modules overlay and
+      // shows the permission-review dialog (user consent) before anything is written
+      // — a module proposes, the user approves. Used by the Local Installer module.
+      install: { permission: "discovery", run: ([source]) => { ModulesStore.requestInstall(source as string); return Promise.resolve(null); } },
     },
     config: {
       get: { permission: "storage", run: ([key], moduleId) => Promise.resolve(localStorage.getItem(cfgKey(moduleId, key))) },
