@@ -129,6 +129,46 @@ console.log(\`installed → \${join(dest, "index.js")}\\nReload Mutka (or toggle
 `;
 }
 
+// A GitHub Action the module repo ships: on every push to the default branch it
+// builds and commits dist/index.js, so Mutka's GitHub discovery — which reads the
+// repo's default branch — always finds a fresh build. Authors push only TypeScript.
+// `paths-ignore: dist/**` plus `[skip ci]` stop the bot's commit from re-triggering.
+export function buildWorkflowYml() {
+  return `name: build
+
+# Builds the module and commits dist/index.js so Mutka's GitHub discovery (which
+# reads this repo's default branch) always finds a fresh build — you push only
+# TypeScript. Needs Settings → Actions → General → Workflow permissions set to
+# "Read and write permissions" so the job can commit dist back.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "dist/**" # the commit this workflow makes must not re-trigger it
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - name: Commit dist/index.js
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/index.js   # -f so it commits even if dist/ is gitignored
+          git diff --staged --quiet && { echo "dist unchanged"; exit 0; }
+          git commit -m "build: dist/index.js [skip ci]"
+          git push origin HEAD:main
+`;
+}
+
 export function readme(cfg) {
   return `# ${cfg.name}
 
@@ -154,7 +194,15 @@ npm run build        # bundles src/index.ts → dist/index.js (one self-containe
 \`\`\`
 
 To distribute via Mutka's GitHub discovery, push this project to a repo named
-\`mutka-module-*\` with \`dist/index.js\` committed; \`mutka.config.json\` points the
-catalog at it. Users then find and install it from the Modules overlay.
+\`mutka-module-*\`. Discovery reads the repo's **default branch**, so the built
+\`dist/index.js\` must live there (\`mutka.config.json\` points the catalog at it).
+
+You don't have to build by hand: this project ships
+\`.github/workflows/build.yml\`, which on every push to \`main\` rebuilds and commits
+\`dist/index.js\` for you — so you push only TypeScript and discovery always sees a
+fresh build. **One-time setup:** in the repo's Settings → Actions → General →
+Workflow permissions, choose **"Read and write permissions"** so the job can commit
+\`dist\` back. (Prefer to manage \`dist\` yourself? Delete the workflow and commit
+\`dist/index.js\` after \`npm run build\`.)
 `;
 }
