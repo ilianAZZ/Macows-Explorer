@@ -162,7 +162,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/index.js
+          git add -f dist/index.js   # -f so it commits even if dist/ is gitignored
           git diff --staged --quiet && { echo "dist unchanged"; exit 0; }
           git commit -m "build: dist/index.js [skip ci]"
           git push origin HEAD:main
