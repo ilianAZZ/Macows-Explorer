@@ -1,58 +1,93 @@
 # Releasing Mutka
 
-Mutka uses **changeset-based versioning**: you never edit a version number by
-hand. You describe each change, and the tooling deduces the next version, writes
-the changelog, tags it, and CI builds + publishes the GitHub Release.
+Mutka releases are driven by **[release-please](https://github.com/googleapis/release-please)**
+on top of **[Conventional Commits](https://www.conventionalcommits.org)**. You
+never edit a version number, write a changelog, or create a tag by hand. You write
+well-formed commit messages; release-please figures out the version, writes the
+changelog, and cuts the release when you merge a PR.
 
 ## The everyday loop
 
-1. Make a code change.
-2. Add a changeset describing it (bump + summary):
-   ```bash
-   pnpm changeset            # interactive: pick patch/minor/major, write a summary
-   ```
-   (Or, with an AI agent, the `add-changeset` skill.) Commit the generated
-   `.changeset/*.md` alongside your change. The pre-commit hook
-   (`.githooks/pre-commit`) blocks a source-changing commit that has no changeset
-   — bypass with `git commit --no-verify` for genuinely version-less commits.
+1. Make a change on a branch.
+2. Commit it with a **Conventional Commit** message — the *type* decides the bump:
 
-## Cutting a release
+   | Commit | Bump | Result |
+   | --- | --- | --- |
+   | `fix: …` | patch | `1.0.0 → 1.0.1` |
+   | `feat: …` | minor | `1.0.0 → 1.1.0` |
+   | `feat!: …` or a `BREAKING CHANGE:` footer | **major** | `1.0.0 → 2.0.0` |
+   | `docs:` `chore:` `refactor:` `test:` `ci:` `build:` `style:` `perf:` | none | no release on its own |
+
+   ```bash
+   git commit -m "feat(modules): add a tags panel"
+   git commit -m "fix(picker): stop crash on an empty folder"
+   git commit -m "feat!: remove host.net.download"      # ! = breaking → major
+   ```
+
+   The local `commit-msg` hook (`.githooks/commit-msg`, wired by the `prepare`
+   script) checks the format as you commit; the **Commitlint** PR check
+   (`.github/workflows/commitlint.yml`) is the gate that can't be `--no-verify`'d.
+3. Open a PR and merge it to `main` as usual.
+
+That's the whole author workflow — **no changeset files, no version edits.**
+
+## How a release is cut
+
+On every push to `main`, **release-please** (`.github/workflows/release-please.yml`)
+maintains **one open "release PR"** titled like `chore(main): release 1.1.0`. That PR
+continuously accumulates, from the commits since the last release:
+
+- the next version (computed from the commit types above), bumped in lockstep across
+  `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the two
+  `packages/*/package.json` (see `release-please-config.json`), and
+- the matching `CHANGELOG.md` section.
+
+**You cut the release by merging that PR.** On merge, release-please creates the
+`vX.Y.Z` git tag + the GitHub Release (with the changelog as the body), and the
+`build` job builds the **universal** (Apple Silicon + Intel) macOS bundle on a
+`macos-14` runner and uploads the `.dmg`, `.app.tar.gz`, and updater `latest.json`
++ signature to that release. The npm packages publish too (see below).
+
+> Choosing a specific version (e.g. forcing the first **1.0.0**): add a
+> `Release-As: 1.0.0` footer to any commit, and release-please will target that
+> version in the release PR.
+
+There is **no local release command** and you never push a final tag yourself —
+merging the release PR is the trigger.
+
+## Release candidates (pre-releases)
+
+The release PR already *accumulates* every unreleased change, so "hold everything,
+then ship one big release" is just the default — you don't need rc's for that. When
+you do want a **test build** before the real release, push an `-rc` tag by hand:
 
 ```bash
-pnpm release              # consumes changesets → bumps version → CHANGELOG → commit → tag vX.Y.Z
-git push --follow-tags    # the tag triggers the release workflow
+git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1
 ```
 
-`pnpm release` runs `scripts/version.mjs`, which:
+A tag with a `-` suffix fires `.github/workflows/release.yml` directly and publishes
+a **pre-release** GitHub Release with the macOS bundle, **flagged so it never becomes
+"latest"** (updater clients aren't offered it) and **npm publish is skipped**. RC tags
+do not touch `CHANGELOG.md` or the release PR — the eventual final release still lists
+every change. Cut as many rc's as you need, then merge the release PR for the final.
 
-- takes the **highest** bump across all pending changesets (major > minor > patch),
-- bumps the version in `package.json`, `src-tauri/tauri.conf.json`, and
-  `src-tauri/Cargo.toml` (the three are kept in lockstep),
-- prepends a section to `CHANGELOG.md`,
-- deletes the consumed changesets,
-- commits `release: vX.Y.Z` and creates the `vX.Y.Z` tag.
+## The two workflows
 
-Use `pnpm version:apply` instead of `pnpm release` if you want to bump the files
-but commit/tag yourself.
+- **`release-please.yml`** (on push to `main`) — maintains the release PR; on merge,
+  tags + releases, then calls `release.yml` to build & attach the bundle.
+- **`release.yml`** — the reusable build-and-publish job. Called by release-please for
+  final releases, **and** triggered directly by a hand-pushed `v*` tag (rc's). A `-`
+  in the tag ⇒ pre-release (not "latest", npm skipped). One build definition serves
+  both paths.
 
-## What CI does (`.github/workflows/release.yml`)
+The macOS bundle is signed + notarized in CI, so `releases/latest/download/latest.json`
+resolves for the in-app updater as soon as the final release publishes.
 
-On a pushed `v*` tag the workflow:
+## npm packages for module authors
 
-1. re-syncs the version from the tag into the manifests (belt-and-suspenders),
-2. builds a **universal** (Apple Silicon + Intel) macOS bundle on a `macos-14` runner,
-3. creates a **draft** GitHub Release and uploads the `.dmg`, `.app.tar.gz`, and
-   (for the updater) `latest.json` + signature.
-
-It's a draft so you can sanity-check the build before clicking **Publish**.
-Publishing makes `releases/latest/download/latest.json` resolve, which is the URL
-the in-app updater polls.
-
-## npm packages for module authors (published on the same tag)
-
-The same `v*` tag also runs two **npm publish** jobs (`publish-sdk`, `publish-create`)
-that push the module-author tooling, **versioned in lockstep with the app** (each job
-stamps the version from the tag):
+On a **final** release, `release.yml` also runs two **npm publish** jobs that push the
+module-author tooling, **versioned in lockstep with the app** (release-please already
+bumped their `package.json`, so no stamping):
 
 - **`@mutka-explorer/module`** — the author-facing TypeScript types (generated from
   `src/core/sandbox` at build time, so they can't drift).
@@ -60,8 +95,7 @@ stamps the version from the tag):
 
 See `packages/CLAUDE.md`. Both need the **`NPM_TOKEN`** repo secret (an npm automation
 token for the `mutka-explorer` org). Without it those jobs fail, but the macOS GitHub
-Release is unaffected. They run only on a real `v*` tag, not on a manual
-`workflow_dispatch`.
+Release is unaffected. They are skipped for rc pre-releases.
 
 ## Code signing & notarization
 
