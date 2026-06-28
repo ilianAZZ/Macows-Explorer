@@ -12,6 +12,24 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function DownloadIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+    </svg>
+  );
+}
+
 function DiscordIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -141,9 +159,7 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-fd-muted-foreground">
-            Mutka keeps a tiny core and lets everything else — even copy-paste and
-            navigation — snap on as modules. Plug one in and watch the window
-            rebuild itself.
+            Mutka keeps a tiny core and lets everything else (even copy-paste) snap on as modules. Create one and plug it.
           </p>
           <div className="hero-badges">
             <Link href="/features/modular-architecture" className="hero-badge" style={{ ["--ac" as string]: "#0a84ff" }}>
@@ -157,6 +173,33 @@ export default function HomePage() {
             </Link>
           </div>
           <InstallCommand />
+          <div
+            className="mt-5 mb-20!"
+          >
+            <p className="text-xs text-fd-muted-foreground">
+              Prefer to build it yourself or grab the notarized app?
+            </p>
+            <div className="mt-3 flex flex-wrap justify-center gap-2.5">
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-fd-border bg-fd-muted/50 px-3.5 py-2 text-[13px] font-medium text-fd-foreground transition hover:bg-fd-muted"
+              >
+                <GitHubIcon size={15} />
+                View source
+              </a>
+              <a
+                href={`${GITHUB_URL}/releases`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-fd-border bg-fd-muted/50 px-3.5 py-2 text-[13px] font-medium text-fd-foreground transition hover:bg-fd-muted"
+              >
+                <DownloadIcon size={15} />
+                Releases &amp; downloads
+              </a>
+            </div>
+          </div>
         </header>
         <ModularBench />
       </section>
@@ -197,8 +240,9 @@ export default function HomePage() {
               Explore the features
             </h2>
             <p className="mt-2 text-sm text-fd-muted-foreground">
-              Four articles on the ideas behind Mutka — the architecture, the
-              sandbox, the extension manager and AI-built modules.
+              Deep dives on the ideas behind Mutka — the architecture, the
+              sandbox, the extension manager, declarative UI, virtual
+              filesystems and AI-built modules.
             </p>
           </div>
           <Link

@@ -544,12 +544,254 @@ const AI: FeatureArticle = {
   ],
 };
 
+const DECLARATIVE: FeatureArticle = {
+  slug: "declarative-ui",
+  label: "Declarative UI",
+  title: "Native UI without shipping a framework",
+  description:
+    "A sandboxed module can't hand React across a worker boundary — so it describes its UI as data. Mutka renders that JSON natively in Liquid Glass: panels, forms, modals and status-bar items.",
+  hook: "Modules paint native panels, forms and status items from pure JSON — no React, no JSX, no markup.",
+  topics: ["UINode tree", "JSON-Schema forms", "Liquid Glass"],
+  accent: "#5e5ce6",
+  badge: "▦",
+  datePublished: "2026-06-28",
+  dateModified: "2026-06-28",
+  related: ["modular-architecture", "safety", "virtual-file-system"],
+  sections: [
+    {
+      kind: "hero",
+      kicker: "UI as data",
+      title: "Modules describe their UI — Mutka draws it",
+      subtitle:
+        "An untrusted module runs in a Web Worker, so it can never hand a React component across the boundary. Instead it sends a serializable tree of nodes, and the host renders them with the same native Liquid Glass widgets the core uses. Modules ship logic, not markup.",
+      badges: ["No React in modules", "No injected CSS", "Native widgets"],
+      cta: [
+        { label: "Read the declarative-UI docs", href: "/docs/modules/declarative-ui", variant: "primary" },
+        { label: "See all features", href: "/features", variant: "ghost" },
+      ],
+    },
+    {
+      kind: "prose",
+      heading: "You can't postMessage a component",
+      lede: true,
+      body: [
+        "A community module lives behind an isolation boundary: no DOM, no document, no way to mount a React tree into Mutka's window. That isolation is the whole point of the sandbox — but UI still has to come from somewhere.",
+        "So a module never sends UI. It sends a description of UI: a small, serializable `UINode` tree. The host receives that JSON and renders it with its own trusted, on-brand components. The module decides what; Mutka decides how it looks.",
+      ],
+    },
+    {
+      kind: "split",
+      heading: "One tree, four surfaces",
+      media: "right",
+      visual: "window",
+      body: [
+        "The same `UINode` vocabulary fills every place a module can show UI, so there's only one thing to learn. Declare a panel and fill it from `setup` with `host.ui.render(id, node)`; open a modal with `host.ui.modal(node)`; add a settings section the same way.",
+        "Status-bar items are dynamic — upsert one with `host.statusbar.set(item)` and a click can open a popover built from the very same node tree.",
+      ],
+      bullets: [
+        "Side panels — declarative panes docked left or right",
+        "Modals & settings sections — same nodes, different surface",
+        "Status-bar items with popovers — live, upsertable",
+      ],
+      cta: [{ label: "The UINode reference", href: "/docs/modules/declarative-ui", variant: "primary" }],
+    },
+    {
+      kind: "steps",
+      heading: "How a click gets back to the module",
+      intro: "Rendering is one half; interaction is the other.",
+      steps: [
+        {
+          title: "Describe",
+          body: "The module builds a UINode tree — a button, a list, a form — and hands it to host.ui.render. Every interactive node carries an action id.",
+          color: "#5e5ce6",
+        },
+        {
+          title: "Render",
+          body: "The host draws the tree with native Liquid Glass widgets. The module never injects HTML, CSS or components — only JSON crosses the boundary.",
+          color: "#0a84ff",
+        },
+        {
+          title: "Route back",
+          body: "When the user clicks or submits, the host routes the event by its action id back into the module's runtime, where the handler you registered with host.onUIEvent runs.",
+          color: "#30d158",
+        },
+      ],
+    },
+    {
+      kind: "split",
+      heading: "Forms are just a schema",
+      media: "left",
+      visual: "manager",
+      body: [
+        "A form is one `form` node carrying a `FormSchema` — a JSON-Schema Draft-7 subset, the standard wire format. The host renders the inputs, validates, and returns the collected values to your handler.",
+        "Authors can generate that schema from zod (`z.toJSONSchema()`); the host never imports zod, it just reads the schema. You describe the fields; Mutka builds the native form.",
+      ],
+    },
+    {
+      kind: "grid",
+      heading: "What modules render this way",
+      intro: "Real dev-modules already use the declarative surface end to end.",
+      items: [
+        { title: "Settings panes", body: "The WebDAV module renders its whole connection form as a declarative settings section.", badge: "⚙", color: "#5e5ce6" },
+        { title: "Inspector panels", body: "Folder Inspector fills a side pane with a live, declarative summary of the current directory.", badge: "▦", color: "#0a84ff" },
+        { title: "Status items", body: "Dir Stats upserts a status-bar item whose popover is built from the same node tree.", badge: "∑", color: "#ff9f0a" },
+        { title: "Modals", body: "Any module can pop a Liquid Glass modal with host.ui.modal(node) and close it with null.", badge: "❏", color: "#30d158" },
+      ],
+    },
+    {
+      kind: "faq",
+      heading: "Frequently asked",
+      items: [
+        {
+          q: "Why can't modules just use React?",
+          a: "Untrusted modules run in an isolated Web Worker with no DOM access — that isolation is what makes a denied permission physically unreachable. A React tree can't cross postMessage, so modules send a serializable UINode tree the host renders instead.",
+        },
+        {
+          q: "Can a module inject custom CSS or HTML?",
+          a: "No. Only JSON crosses the boundary. The host renders every node with its own trusted Liquid Glass components, so modules can't break the look or smuggle in markup.",
+        },
+        {
+          q: "How do forms work without a UI framework?",
+          a: "A form node carries a JSON-Schema (Draft-7 subset). The host renders the fields, validates input and returns the values. You can author the schema by hand or generate it from zod.",
+        },
+      ],
+    },
+    {
+      kind: "cta",
+      heading: "Paint a panel without a framework",
+      body: "Describe your UI as nodes and let Mutka render it natively.",
+      color: "#5e5ce6",
+      links: [
+        { label: "Read the declarative-UI docs", href: "/docs/modules/declarative-ui", variant: "primary" },
+        { label: "Write your first module", href: "/docs/modules/writing-a-module", variant: "ghost" },
+      ],
+    },
+  ],
+};
+
+const VFS: FeatureArticle = {
+  slug: "virtual-file-system",
+  label: "Virtual file systems",
+  title: "Mount the cloud as a folder",
+  description:
+    "A module can serve a whole filesystem that doesn't exist on disk. Claim a URL scheme, answer listing requests, and a remote like WebDAV, S3 or Nextcloud appears as an ordinary Place in the sidebar.",
+  hook: "Mount WebDAV, S3 or Nextcloud as a Place in the sidebar — a filesystem that doesn't exist on disk.",
+  topics: ["URL schemes", "Sidebar Places", "Remote listings"],
+  accent: "#5ac8fa",
+  badge: "☁",
+  datePublished: "2026-06-28",
+  dateModified: "2026-06-28",
+  related: ["modular-architecture", "declarative-ui", "safety"],
+  sections: [
+    {
+      kind: "hero",
+      kicker: "browse anything",
+      title: "A folder that lives somewhere else",
+      subtitle:
+        "Not every filesystem is on your disk. A Mutka module can stand in for one entirely — claim a scheme like nextcloud://, answer requests for listings, and Mutka navigates it exactly like a local folder, breadcrumbs and all.",
+      badges: ["WebDAV / S3 / Nextcloud", "Sidebar Places", "Same navigation"],
+      cta: [
+        { label: "Read the virtual-FS docs", href: "/docs/modules/virtual-file-system", variant: "primary" },
+        { label: "See all features", href: "/features", variant: "ghost" },
+      ],
+    },
+    {
+      kind: "prose",
+      heading: "The explorer doesn't care where files live",
+      lede: true,
+      body: [
+        "Navigation in Mutka is just \"given a path, return its entries.\" Nothing in the core assumes those entries come from your disk — it only assumes something can answer the question.",
+        "A virtual-filesystem module is that something. It registers a URL scheme and a listing handler; when you open a path under that scheme, Mutka asks the module instead of the operating system. To the rest of the app, a remote folder and a local one are indistinguishable.",
+      ],
+    },
+    {
+      kind: "split",
+      heading: "Claim a scheme, serve the entries",
+      media: "right",
+      visual: "window",
+      body: [
+        "A module declares a sidebar place pointing at its own scheme — say `nextcloud://` — and a handler that turns a path into a list of `FileItem`s. Mutka renders that list with its normal file view: icons, columns, selection, breadcrumbs.",
+        "The entries are fetched over the host-proxied network, gated by the module's declared network tier — so a virtual filesystem reaches a remote server without ever getting raw socket access.",
+      ],
+      bullets: [
+        "One sidebar Place per mount, grouped under its own category",
+        "Listings returned as ordinary FileItem entries",
+        "Network access is permission-gated, never raw",
+      ],
+      cta: [{ label: "How listings work", href: "/docs/modules/virtual-file-system", variant: "primary" }],
+    },
+    {
+      kind: "steps",
+      heading: "From sidebar click to remote listing",
+      intro: "Three steps, all inside one module file.",
+      steps: [
+        {
+          title: "Register a Place",
+          body: "The module contributes a sidebar item pointing at its own URL scheme — it shows up as a mount in the Places list.",
+          color: "#5ac8fa",
+        },
+        {
+          title: "Answer the path",
+          body: "When you navigate into the scheme, Mutka calls the module's listing handler with the path; it fetches the remote directory and returns FileItem entries.",
+          color: "#0a84ff",
+        },
+        {
+          title: "Render natively",
+          body: "Mutka shows the result in the normal file view — same columns, selection and breadcrumbs as a local folder.",
+          color: "#30d158",
+        },
+      ],
+    },
+    {
+      kind: "grid",
+      heading: "What you can mount",
+      intro: "Any backend you can list over the network can become a Place.",
+      items: [
+        { title: "WebDAV", body: "The com.webdav dev-module mounts a WebDAV share as a browsable Place, settings UI included.", badge: "DAV", color: "#5ac8fa" },
+        { title: "Nextcloud", body: "Point the same module at a Nextcloud endpoint and your cloud files show up in the sidebar.", badge: "☁", color: "#0a84ff" },
+        { title: "Object storage", body: "An S3-style bucket can be listed and browsed like any other folder.", badge: "S3", color: "#ff9f0a" },
+        { title: "Anything listable", body: "A REST API, an archive's contents, a database of blobs — if you can list it, you can mount it.", badge: "+", color: "#30d158" },
+      ],
+    },
+    {
+      kind: "faq",
+      heading: "Frequently asked",
+      items: [
+        {
+          q: "Does a virtual filesystem download everything first?",
+          a: "No. The module answers listing requests on demand — it returns the entries for the path you're viewing, fetched over the host-proxied network when you navigate there.",
+        },
+        {
+          q: "Is a remote folder treated differently from a local one?",
+          a: "Not by the UI. Mutka renders virtual listings with the same file view, columns, selection and breadcrumbs as a local directory. The difference lives entirely inside the module.",
+        },
+        {
+          q: "Can a virtual filesystem reach any server it wants?",
+          a: "Only within its declared network permission tier. Network access is host-proxied and gated — a module never gets raw socket access, so it can only talk to what it asked for.",
+        },
+      ],
+    },
+    {
+      kind: "cta",
+      heading: "Mount a remote as a Place",
+      body: "Claim a scheme, return listings, and the cloud becomes a folder.",
+      color: "#5ac8fa",
+      links: [
+        { label: "Read the virtual-FS docs", href: "/docs/modules/virtual-file-system", variant: "primary" },
+        { label: "Write your first module", href: "/docs/modules/writing-a-module", variant: "ghost" },
+      ],
+    },
+  ],
+};
+
 /** All feature articles, in the order they appear on the hub. */
 export const FEATURE_ARTICLES: FeatureArticle[] = [
   MODULAR,
   SAFETY,
   MANAGER,
   AI,
+  DECLARATIVE,
+  VFS,
 ];
 
 export function getArticle(slug: string): FeatureArticle | undefined {

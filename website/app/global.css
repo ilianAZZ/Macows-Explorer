@@ -48,13 +48,7 @@
   border-color: color-mix(in srgb, var(--ac) 45%, var(--color-fd-border));
   box-shadow: 0 16px 40px -24px var(--ac);
 }
-.accent-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--ac), transparent);
-}
+
 .accent-chip {
   display: inline-grid;
   place-items: center;

@@ -92,7 +92,7 @@ export default function FeaturesHub() {
         </div>
       </header>
 
-      <FeatureCardGrid lead />
+      <FeatureCardGrid />
     </main>
   );
 }

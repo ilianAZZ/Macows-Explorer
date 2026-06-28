@@ -310,12 +310,6 @@
   gap: 1.1rem;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
-/* hub layout: a wide lead card spanning the top, the rest below */
-@media (min-width: 720px) {
-  .feat-grid--lead { grid-template-columns: repeat(3, 1fr); }
-  .feat-grid--lead .feat-card--lead { grid-column: 1 / -1; }
-}
-
 .feat-card {
   position: relative;
   display: flex;
@@ -352,12 +346,6 @@
   letter-spacing: -0.01em;
   color: var(--color-fd-foreground);
 }
-.feat-hook {
-  margin-top: 0.55rem;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--color-fd-muted-foreground);
-}
 .feat-topics {
   display: flex;
   flex-wrap: wrap;
@@ -381,19 +369,6 @@
   transition: gap 0.18s;
 }
 .feat-card:hover .feat-go { text-decoration: underline; text-underline-offset: 3px; }
-
-/* the lead card gets a roomier two-column layout on wide screens */
-@media (min-width: 720px) {
-  .feat-card--lead {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1.7rem 1.8rem;
-  }
-  .feat-card--lead .feat-title { font-size: 20px; }
-  .feat-card--lead .feat-go { white-space: nowrap; }
-}
 
 /* ============================================================= *
  *  FEATURE VISUALS — keyed CSS illustrations for split blocks    *
