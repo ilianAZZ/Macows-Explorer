@@ -30,6 +30,12 @@ export interface WhenClause {
   selection?: WhenSelection;
   /** Gate on clipboard contents (for a Paste command). */
   clipboard?: "hasItems";
+  /** Only when EVERY selected item's file name is one of these (e.g. ["index.js"]
+   *  to show an action only on module files). Case-sensitive. */
+  fileNames?: string[];
+  /** Only when EVERY selected item's extension is one of these (lowercased, no dot,
+   *  e.g. ["js"]). */
+  extensions?: string[];
 }
 
 // ─── A command contributed by a module ───────────────────────────────────────

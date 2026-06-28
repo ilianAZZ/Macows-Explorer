@@ -147,10 +147,13 @@ export interface SandboxHostApi {
   net: {
     request(options: NetRequestOptions): Promise<unknown>;
   };
-  /** Module tooling for discovery sources (gated by the `discovery` permission). */
+  /** Module tooling (gated by the `discovery` permission). */
   modules: {
     /** Validate an ESM source in a throwaway worker and return its manifest. */
     probe(source: string): Promise<unknown>;
+    /** Propose a module source for install — opens the permission-review dialog so
+     *  the user approves before anything is written. */
+    install(source: string): Promise<unknown>;
   };
   /** Per-module persisted config (gated by the `storage` permission). */
   config: {
@@ -291,6 +294,7 @@ export function createHostProxy(t: Transport): SandboxHostApi {
     },
     modules: {
       probe: (source) => callHost("modules", "probe", [source]),
+      install: (source) => callHost("modules", "install", [source]),
     },
     config: {
       get: (key) => callHost("config", "get", [key]),

@@ -1,12 +1,33 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ModuleManager } from "../../module-manager/ModuleManager";
 import { DiscoveryRegistry } from "../../module-manager/DiscoveryRegistry";
+import { probeManifest } from "../../module-manager/probeManifest";
 import type { ModuleListing, ResolvedModule } from "../../module-manager/types";
+import type { SandboxManifest } from "../../core/sandbox/protocol";
+import { ModulesStore } from "../../core/stores/ModulesStore";
+import { EventBus } from "../../core/event-bus/EventBus";
+import { Events } from "../../core/event-bus/events";
 import { useModules } from "../../hooks/useModules";
 import { InstalledList } from "./InstalledList";
 import { BrowseCatalog } from "./BrowseCatalog";
 import { InstallReviewDialog } from "./InstallReviewDialog";
 import "./ModulesPanel.css";
+
+/** A synthetic listing for a raw source (local file / module-proposed install). */
+function localListing(manifest: SandboxManifest): ModuleListing {
+  return {
+    sourceId: "local",
+    ref: manifest.id,
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    icon: manifest.icon,
+    author: (manifest.author ?? null) as ModuleListing["author"],
+    permissions: manifest.permissions,
+    tags: manifest.tags,
+  };
+}
 
 interface ModulesPanelProps {
   onClose: () => void;
@@ -43,6 +64,25 @@ export function ModulesPanel({ onClose }: ModulesPanelProps) {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose, review, installing]);
+
+  // A module (e.g. the Local Installer) asked to install a raw source: probe it and
+  // open the same permission-review dialog the Browse install uses.
+  useEffect(() => {
+    const handle = async () => {
+      const source = ModulesStore.takePendingInstall();
+      if (!source) return;
+      try {
+        const manifest = await probeManifest(source);
+        setReviewError(null);
+        setReview({ source, manifest, listing: localListing(manifest) });
+      } catch (err) {
+        setActionError(`Could not load the selected module: ${String(err instanceof Error ? err.message : err)}`);
+      }
+    };
+    void handle(); // covers the overlay being opened *by* the request
+    const unsub = EventBus.on(Events.ModulesUi.installRequested, () => void handle());
+    return unsub;
+  }, []);
 
   const handleToggle = useCallback(async (id: string) => {
     setBusyId(id);
