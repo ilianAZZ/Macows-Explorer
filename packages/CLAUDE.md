@@ -57,8 +57,18 @@ A dependency-free Node CLI (built on `node:readline`/`parseArgs`) so it runs ins
 via `npm create @mutka-explorer` / `npx @mutka-explorer/create`. It prompts for
 id/name/permissions (or takes flags + `--yes`) and writes a project: a typed
 `src/index.ts`, a `package.json` pinning `@mutka-explorer/module` + a `tsup` build to one
-ESM file, `tsconfig.json`, `mutka.config.json` (for GitHub discovery), and a
-`scripts/dev-install.mjs` that copies the build into `~/.mutka/modules/<id>/`.
+ESM file, `tsconfig.json`, `mutka.config.json` (for GitHub discovery), a
+`scripts/dev-install.mjs` that copies the build into `~/.mutka/modules/<id>/`, and a
+`.github/workflows/build.yml`.
+
+**Why the generated build workflow matters.** GitHub discovery
+(`sandbox-builtins/github-discovery.ts`) fetches a module's `dist/index.js` from the
+repo's **default branch** — it never looks at releases. A TS module's repo only has
+`src/index.ts` until something builds it, so the scaffolded `build.yml` rebuilds and
+commits `dist/index.js` on every push to `main` (loop-guarded with `paths-ignore:
+dist/**` + a `[skip ci]` commit). Authors push only TypeScript; discovery always finds a
+fresh build. No core/discovery change was needed — this is the deliberate reason discovery
+stayed as-is.
 
 - `lib/templates.mjs` owns every generated file's contents (incl. the `PERMISSIONS` list —
   keep it in sync with `ModulePermission`). `lib/main.mjs` orchestrates; `lib/scaffold.mjs`

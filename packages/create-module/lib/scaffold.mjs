@@ -4,6 +4,7 @@ import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
 import {
   indexTs, packageJson, tsconfigJson, mutkaConfigJson, gitignore, devInstallMjs, readme,
+  buildWorkflowYml,
 } from "./templates.mjs";
 
 /** Detect the package manager that invoked us (npm create / yarn create / pnpm). */
@@ -32,6 +33,7 @@ export function writeProject(dir, cfg) {
     "README.md": readme(cfg),
     "src/index.ts": indexTs(cfg),
     "scripts/dev-install.mjs": devInstallMjs(),
+    ".github/workflows/build.yml": buildWorkflowYml(),
   };
   for (const [rel, contents] of Object.entries(files)) {
     writeFileEnsuring(join(dir, rel), contents);
