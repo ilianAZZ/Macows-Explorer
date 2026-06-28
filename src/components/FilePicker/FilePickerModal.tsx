@@ -129,12 +129,12 @@ export function FilePickerModal({ options, initialDir, onPick }: FilePickerModal
           <button className="filepicker-cancel" onClick={() => onPick(null)}>Cancel</button>
           {canPickFolder && (
             <button className="filepicker-select" onClick={() => onPick(dir)}>
-              Select Folder
+              Open Current Folder
             </button>
           )}
           {mode !== "folder" && (
             <button className="filepicker-select" onClick={() => chosen && onPick(chosen.path)} disabled={!chosen}>
-              Select
+              {chosen ? `Open "${chosen.name}"` : "Select a file"}
             </button>
           )}
         </div>
