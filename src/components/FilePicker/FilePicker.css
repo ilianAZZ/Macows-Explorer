@@ -9,87 +9,44 @@
 }
 
 .filepicker {
-  width: 520px;
-  max-width: 90vw;
-  max-height: 78vh;
+  width: 760px;
+  max-width: 92vw;
+  height: 80vh;
   display: flex;
   flex-direction: column;
-  background: var(--panel-bg, var(--bg));
-  border: 1px solid var(--border);
+  /* The app window is transparent (vibrancy), so the modal needs its own opaque
+     glass surface — same treatment as <Dialog>. */
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.84) 100%);
+  backdrop-filter: blur(64px) saturate(200%) brightness(1.04);
+  -webkit-backdrop-filter: blur(64px) saturate(200%) brightness(1.04);
+  border: 1px solid var(--rim-bright, var(--border));
   border-radius: var(--r-lg, 12px);
-  box-shadow: 0 24px 60px color-mix(in srgb, black 40%, transparent);
+  box-shadow: var(--shadow-float, 0 24px 60px color-mix(in srgb, black 40%, transparent));
   overflow: hidden;
 }
 
+[data-theme="dark"] .filepicker {
+  background: linear-gradient(160deg, rgba(45, 45, 52, 0.97) 0%, rgba(35, 35, 42, 0.95) 100%);
+}
+
 .filepicker-header {
-  padding: 14px 16px 10px;
+  padding: 13px 16px 9px;
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
 }
 
-.filepicker-path {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px 10px;
+/* Outer spacing around the shared FileBrowser shell (mirrors #app's padding). */
+.filepicker .file-browser {
+  padding: 0 12px;
+  min-height: 0;
 }
 
-.filepicker-up {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--r-sm, 6px);
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-}
-.filepicker-up:disabled { opacity: 0.4; cursor: default; }
-
-.filepicker-dir {
-  flex: 1 1 auto;
-  font-size: 12px;
-  color: var(--text-secondary, var(--text));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  direction: rtl; /* keep the tail (filename) visible when truncating */
-  text-align: left;
-}
-
-.filepicker-list {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  border-top: 1px solid var(--border);
+/* The breadcrumb sits in the card header (FileBrowser header slot). */
+.filepicker-breadcrumb {
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
-  min-height: 180px;
 }
-
-.filepicker-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-}
-.filepicker-row:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.filepicker-row--selected { background: var(--accent-sel, color-mix(in srgb, var(--accent) 22%, transparent)); }
-.filepicker-row--disabled { color: var(--text-tertiary, color-mix(in srgb, var(--text) 45%, transparent)); cursor: default; }
-.filepicker-row--disabled:hover { background: transparent; }
-
-.filepicker-row-icon { flex: 0 0 auto; }
-.filepicker-row-name { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.filepicker-empty,
-.filepicker-error {
-  padding: 18px 14px;
-  font-size: 12px;
-  color: var(--text-secondary, var(--text));
-}
-.filepicker-error { color: color-mix(in srgb, crimson 70%, var(--text)); }
 
 .filepicker-actions {
   display: flex;

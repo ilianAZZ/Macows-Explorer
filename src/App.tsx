@@ -26,9 +26,8 @@ import { useNativeThemeSync } from "./hooks/useNativeThemeSync";
 import { useExternalDropGuard } from "./hooks/useExternalDropGuard";
 import { useAppBridge } from "./hooks/useAppBridge";
 import { resolveMenuZone, type MenuZone } from "./core/menu/menuZone";
-import { FileList } from "./components/FileList/FileList";
+import { FileBrowser } from "./components/FileBrowser/FileBrowser";
 import { Sidebar } from "./components/Sidebar/Sidebar";
-import { Places } from "./components/Places/Places";
 import { TabBar } from "./components/TabBar/TabBar";
 import { Toolbar } from "./components/Toolbar/Toolbar";
 import type { SidebarPanelProps } from "./core/module-registry/module-registry.types";
@@ -163,64 +162,63 @@ export function App() {
 
   return (
     <div id="app" onContextMenu={handleContextMenu} onClick={() => setContextMenu(null)}>
-      <Places
-        groups={sidebarItemGroups}
-        homeDir={homeDir}
-        currentDir={currentDir}
-        onNavigate={navigateTo}
-        onRunCommand={(id) => ModuleRegistry.executeAction(id)}
-        onRemoveItem={(id) => EventBus.emit(Events.Sidebar.itemRemove, { id })}
-      />
-
-      <div id="main-col">
-        <Toolbar
-          currentDir={currentDir}
-          flashedBtn={flashedBtn}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onNavigate={navigateTo}
-          onBack={goBack}
-          onForward={goForward}
-          onUp={goUp}
-          onRefresh={refresh}
-          onOpenModules={() => ModulesStore.setOpen(true)}
-          onOpenSettings={() => ModuleRegistry.executeAction("core.settings.toggle")}
-        />
-
-        <TabBar />
-
-        <div id="content-row">
-          <FileList
-            files={listing.items}
-            selected={selected}
-            cutItems={clipboard.operation === "cut" ? clipboard.items : []}
-            sort={listing.sort}
-            error={loadError}
-            currentDir={currentDir}
-            extraColumns={extraColumns}
-            cellData={columnCells}
-            columnWidths={columnWidths}
-            onColumnResize={handleColumnResize}
-            onSelect={(items) => SelectionStore.set(items)}
-            onOpen={(item) => ModuleRegistry.resolveOpen(item)}
-            onSortChange={handleSortChange}
-            onModifierOpen={handleModifierOpen}
-            onMiddleClick={handleMiddleClick}
-            onMoveItems={handleMoveItems}
-            onDropExternal={handleDropExternal}
-            onNativeDrag={(items) => DragService.startForItems(items)}
-            onRendered={(count) => EventBus.emit(Events.Listing.rendered, { path: currentDir, count })}
+      <FileBrowser
+        places={{
+          groups: sidebarItemGroups,
+          homeDir,
+          currentDir,
+          onNavigate: navigateTo,
+          onRunCommand: (id) => ModuleRegistry.executeAction(id),
+          onRemoveItem: (id) => EventBus.emit(Events.Sidebar.itemRemove, { id }),
+        }}
+        header={
+          <>
+            <Toolbar
+              currentDir={currentDir}
+              flashedBtn={flashedBtn}
+              canGoBack={canGoBack}
+              canGoForward={canGoForward}
+              onNavigate={navigateTo}
+              onBack={goBack}
+              onForward={goForward}
+              onUp={goUp}
+              onRefresh={refresh}
+              onOpenModules={() => ModulesStore.setOpen(true)}
+              onOpenSettings={() => ModuleRegistry.executeAction("core.settings.toggle")}
+            />
+            <TabBar />
+          </>
+        }
+        fileList={{
+          files: listing.items,
+          selected,
+          cutItems: clipboard.operation === "cut" ? clipboard.items : [],
+          sort: listing.sort,
+          error: loadError,
+          currentDir,
+          extraColumns,
+          cellData: columnCells,
+          columnWidths,
+          onColumnResize: handleColumnResize,
+          onSelect: (items) => SelectionStore.set(items),
+          onOpen: (item) => ModuleRegistry.resolveOpen(item),
+          onSortChange: handleSortChange,
+          onModifierOpen: handleModifierOpen,
+          onMiddleClick: handleMiddleClick,
+          onMoveItems: handleMoveItems,
+          onDropExternal: handleDropExternal,
+          onNativeDrag: (items) => DragService.startForItems(items),
+          onRendered: (count) => EventBus.emit(Events.Listing.rendered, { path: currentDir, count }),
+        }}
+        right={<Sidebar side="right" panels={rightPanels} panelProps={panelProps} />}
+        footer={
+          <StatusBar
+            itemCount={listing.items.length}
+            selectedCount={selected.length}
+            clipboard={clipboard}
           />
-
-          <Sidebar side="right" panels={rightPanels} panelProps={panelProps} />
-        </div>
-
-        <StatusBar
-          itemCount={listing.items.length}
-          selectedCount={selected.length}
-          clipboard={clipboard}
-        />
-      </div>
+        }
+      />
 
       {contextMenu && menuGroups.length > 0 && (
         <ContextMenu

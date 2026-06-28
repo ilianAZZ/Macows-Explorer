@@ -1,0 +1,41 @@
+/* The two-pane browser shell: Places sidebar + a floating main-column card, with
+   the 8px gap between them. Shared by the main window (#app) and the file picker. */
+.file-browser {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* Right pane: a floating rounded card holding the header over the file content. */
+.file-browser-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 0.5px solid var(--rim-mid);
+  box-shadow: var(--shadow-panel);
+  background: rgba(248, 248, 250, 0.98);
+}
+
+[data-theme="dark"] .file-browser-col {
+  background: rgba(26, 26, 28, 0.99);
+}
+
+/* The file content row (file list + any right sidebar). */
+.file-browser-content {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-browser-content #file-list {
+  min-width: 0;
+}

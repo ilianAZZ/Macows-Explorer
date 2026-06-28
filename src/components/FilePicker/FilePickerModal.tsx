@@ -1,6 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FileItem, DialogPickFileOptions } from "../../core/types";
+import type { SortState, SortKey } from "../../core/stores/listing.types";
 import { FileSystemRegistry } from "../../core/file-system/FileSystemRegistry";
+import { ModuleRegistry } from "../../core/module-registry/ModuleRegistry";
+import { HomeStore } from "../../core/stores/HomeStore";
+import { Breadcrumb } from "../Breadcrumb/Breadcrumb";
+import { FileBrowser } from "../FileBrowser/FileBrowser";
 import "./FilePicker.css";
 
 interface FilePickerModalProps {
@@ -11,35 +16,48 @@ interface FilePickerModalProps {
   onPick: (path: string | null) => void;
 }
 
-/** The parent directory of an absolute path. */
-function parentDir(p: string): string {
-  const trimmed = p.replace(/\/+$/, "");
-  const idx = trimmed.lastIndexOf("/");
-  return idx <= 0 ? "/" : trimmed.slice(0, idx);
+const EMPTY: FileItem[] = [];
+const DEFAULT_SORT: SortState = { key: "name", dir: "asc" };
+
+/** Dirs first, then by the active sort key (mirrors the main list). */
+function sortFiles(files: FileItem[], sort: SortState): FileItem[] {
+  const dir = sort.dir === "asc" ? 1 : -1;
+  return [...files].sort((a, b) => {
+    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+    switch (sort.key) {
+      case "size": return (a.size - b.size) * dir;
+      case "date": return (a.modified - b.modified) * dir;
+      case "type": return (a.extension ?? "").localeCompare(b.extension ?? "") * dir;
+      default: return a.name.localeCompare(b.name) * dir;
+    }
+  });
 }
 
 /**
- * A Mutka-native file picker: a modal file browser (its own little Mutka instance)
- * used by the `dialog.pickFile` capability. Folders navigate; files are selectable,
- * dimmed when they don't match `options.fileNames` (e.g. only `index.js`). Resolves
- * with the chosen path or null. Pure UI — reads listings via FileSystemRegistry.
+ * A Mutka-native file picker used by the `dialog.pickFile` capability: a modal that
+ * reuses the real browsing components — the `Places` sidebar (Home + module-
+ * contributed locations like WebDAV mounts), the `Breadcrumb`, and the `FileList`.
+ * Folders navigate; the chosen file resolves the promise. `options.fileNames` limits
+ * what counts as a valid pick (e.g. only `index.js`). Listings come via
+ * `FileSystemRegistry`, so provider schemes (`webdav:`…) work too.
  */
 export function FilePickerModal({ options, initialDir, onPick }: FilePickerModalProps) {
   const [dir, setDir] = useState(initialDir);
   const [items, setItems] = useState<FileItem[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<FileItem[]>([]);
+  const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  const groups = useMemo(() => ModuleRegistry.getSidebarItemGroups(), []);
+  const sortedItems = useMemo(() => sortFiles(items, sort), [items, sort]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setError(null);
-    setSelected(null);
+    setSelected([]);
     FileSystemRegistry.readDir(dir)
       .then((res) => { if (!cancelled) setItems(res); })
-      .catch((e) => { if (!cancelled) setError(String(e instanceof Error ? e.message : e)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch((e) => { if (!cancelled) { setItems([]); setError(String(e instanceof Error ? e.message : e)); } });
     return () => { cancelled = true; };
   }, [dir]);
 
@@ -49,54 +67,61 @@ export function FilePickerModal({ options, initialDir, onPick }: FilePickerModal
     return () => document.removeEventListener("keydown", onKey);
   }, [onPick]);
 
-  const selectable = useCallback(
+  const pickable = useCallback(
     (item: FileItem): boolean =>
       !item.isDir && (!options.fileNames || options.fileNames.includes(item.name)),
     [options.fileNames]
   );
 
-  const onRowClick = (item: FileItem): void => {
-    if (item.isDir) setDir(item.path);
-    else if (selectable(item)) setSelected((s) => (s === item.path ? null : item.path));
-  };
+  // Keep only pickable files, so "Select" only enables for a valid choice.
+  const handleSelect = useCallback((sel: FileItem[]) => setSelected(sel.filter(pickable)), [pickable]);
 
-  const onRowDoubleClick = (item: FileItem): void => {
+  const handleOpen = useCallback((item: FileItem) => {
     if (item.isDir) setDir(item.path);
-    else if (selectable(item)) onPick(item.path);
-  };
+    else if (pickable(item)) onPick(item.path);
+  }, [pickable, onPick]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSort((s) => ({ key, dir: s.key === key && s.dir === "asc" ? "desc" : "asc" }));
+  }, []);
+
+  const chosen = selected[0] ?? null;
 
   return (
     <div className="filepicker-backdrop" onClick={() => onPick(null)}>
       <div className="filepicker" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Pick a file">
         <div className="filepicker-header">{options.title ?? "Select a file"}</div>
-        <div className="filepicker-path">
-          <button className="filepicker-up" onClick={() => setDir(parentDir(dir))} disabled={dir === "/"} title="Up">↑</button>
-          <span className="filepicker-dir" title={dir}>{dir}</span>
-        </div>
 
-        <div className="filepicker-list">
-          {loading && <div className="filepicker-empty">Loading…</div>}
-          {error && <div className="filepicker-error">{error}</div>}
-          {!loading && !error && items.length === 0 && <div className="filepicker-empty">Empty folder</div>}
-          {!loading && !error && items.map((item) => {
-            const ok = item.isDir || selectable(item);
-            return (
-              <div
-                key={item.path}
-                className={`filepicker-row${item.path === selected ? " filepicker-row--selected" : ""}${ok ? "" : " filepicker-row--disabled"}`}
-                onClick={() => onRowClick(item)}
-                onDoubleClick={() => onRowDoubleClick(item)}
-              >
-                <span className="filepicker-row-icon">{item.isDir ? "📁" : "📄"}</span>
-                <span className="filepicker-row-name">{item.name}</span>
-              </div>
-            );
-          })}
-        </div>
+        <FileBrowser
+          places={{
+            groups,
+            homeDir: HomeStore.homeDir,
+            currentDir: dir,
+            onNavigate: setDir,
+            onRunCommand: () => {},
+            onRemoveItem: () => {},
+          }}
+          header={
+            <div className="filepicker-breadcrumb">
+              <Breadcrumb path={dir} onNavigate={setDir} />
+            </div>
+          }
+          fileList={{
+            files: sortedItems,
+            selected,
+            cutItems: EMPTY,
+            sort,
+            currentDir: dir,
+            error,
+            onSelect: handleSelect,
+            onOpen: handleOpen,
+            onSortChange: handleSort,
+          }}
+        />
 
         <div className="filepicker-actions">
           <button className="filepicker-cancel" onClick={() => onPick(null)}>Cancel</button>
-          <button className="filepicker-select" onClick={() => selected && onPick(selected)} disabled={!selected}>
+          <button className="filepicker-select" onClick={() => chosen && onPick(chosen.path)} disabled={!chosen}>
             Select
           </button>
         </div>
