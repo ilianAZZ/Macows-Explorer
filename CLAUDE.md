@@ -89,30 +89,33 @@ Subsequent runs are fast (<5s for Rust changes, instant for TS/CSS changes).
 
 ## Releasing — the tag IS the release trigger
 
-**Releases are not created from the GitHub UI and CI does not invent the tag.** A
-release happens because **a `vX.Y.Z` git tag is pushed**; that push (and only that
-push) triggers `.github/workflows/release.yml`, which builds the universal macOS
-bundle and creates a **draft** GitHub Release with the `.dmg`, `.app.tar.gz`, and
-updater `latest.json` + signature attached. You then click **Publish**.
+Releases are driven by **[release-please](https://github.com/googleapis/release-please)**
++ **[Conventional Commits](https://www.conventionalcommits.org)** — never hand-edit a
+version, write a changelog, or create a tag. The rules:
 
-Versioning is **changeset-based** — never hand-edit a version number. The rules:
+1. **Every commit is a Conventional Commit** — `type(scope): subject`. The *type*
+   decides the bump: `fix:` → **patch**, `feat:` → **minor**, `feat!:` (or a
+   `BREAKING CHANGE:` footer) → **major**. `docs:`/`chore:`/`refactor:`/`test:`/`ci:`/
+   `build:`/`style:`/`perf:` don't trigger a release on their own. Use `feat!:` for any
+   breaking change to the module API (`host`/`defineModule`/`protocol.ts`/any documented
+   contract). The local `commit-msg` hook (`.githooks/commit-msg`, wired by the `prepare`
+   script) checks format; the **Commitlint** PR check is the un-bypassable gate.
+2. **release-please maintains one open "release PR"** (`.github/workflows/release-please.yml`)
+   that accumulates the next version + `CHANGELOG.md` from the commits since the last
+   release, bumping `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`,
+   and both `packages/*/package.json` **in lockstep** (`release-please-config.json`).
+3. **Cut a release by merging that PR.** On merge, release-please creates the `vX.Y.Z`
+   tag + GitHub Release (changelog as the body); `release.yml` then builds the universal
+   macOS bundle, uploads `.dmg`/`.app.tar.gz`/`latest.json`+sig, and publishes the npm
+   packages. You never push a final tag yourself. (Force a specific version — e.g. the
+   first `1.0.0` — with a `Release-As: 1.0.0` commit footer.)
+4. **Release candidates**: push an `-rc` tag by hand (`git tag v1.0.0-rc.1 && git push
+   origin v1.0.0-rc.1`) to fire `release.yml` directly for a **pre-release** test build
+   (not "latest", npm skipped). The release PR keeps accumulating, so the final still
+   lists everything. The release PR is the "hold everything until you ship" mechanism —
+   rc's are just optional test builds.
 
-1. **Every source-changing commit needs a changeset** (`src/`, `src-tauri/src/`, or
-   the manifests). Use the `add-changeset` skill; the pre-commit hook blocks commits
-   that lack one. Docs/chore/changeset-only commits are exempt.
-2. **Bump level**: `patch` (fix/refactor), `minor` (new feature/capability/permission/
-   event/Tauri command, backward-compatible), `major` (breaking change to the module
-   API — `host`/`defineModule`/`protocol.ts`/any documented contract). Highest staged
-   bump wins.
-3. **Cut the release** with `pnpm release` — it consumes the changesets, bumps the
-   three manifests in lockstep (`package.json`, `tauri.conf.json`, `Cargo.toml`),
-   writes `CHANGELOG.md`, commits `release: vX.Y.Z`, and **creates the tag**. Then
-   `git push --follow-tags` to push the tag and fire CI. Do **not** create the tag or
-   release by hand — `tauri-action` owns the release for that tag, so a manually
-   created one collides.
-
-See `docs/releasing.md` and `.changeset/README.md` for the full flow, and the
-`add-changeset` / `cut-release` skills.
+See `docs/releasing.md` for the full flow and the `cut-release` / `commit-conventions` skills.
 
 ### Signing secrets (repo Actions secrets)
 

@@ -23,9 +23,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri",
-    "changeset": "node scripts/changeset.mjs",
-    "version:apply": "node scripts/version.mjs",
-    "release": "node scripts/version.mjs --tag",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {

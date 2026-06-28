@@ -1,43 +1,61 @@
-name: Release
+name: Release (build & publish)
 
-# Builds the macOS app and publishes it as a GitHub Release with attached
-# .dmg + .app.tar.gz assets. Triggered by pushing a version tag (e.g. v0.1.0).
+# Builds the universal macOS bundle for a tag and uploads it to that tag's GitHub
+# Release, then publishes the npm packages. It runs two ways:
 #
-# Versioning: the tag IS the version. The "sync-version" step rewrites the
-# version in package.json / tauri.conf.json / Cargo.toml to match the tag so
-# the three never drift, then tauri-action bundles with that version.
+#   1. Called by release-please.yml when a release PR is merged (final release).
+#      The tag + GitHub Release already exist (release-please made them, with the
+#      changelog as the body); this just attaches the binaries.
+#   2. Triggered directly by pushing a `vX.Y.Z-rc.N` tag by hand (release
+#      candidate). No release exists yet, so tauri-action creates one, flagged as
+#      a pre-release. RC tags do NOT touch the changelog or npm — they're throwaway
+#      test builds.
+#
+# A tag with a `-` suffix is treated as a pre-release (not marked "latest", npm
+# publish skipped).
 
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The vX.Y.Z tag to build and publish.
+        required: true
+        type: string
   push:
     tags:
-      - "v*" # v0.1.0, v0.2.0-beta.1, ...
-  # Allow a manual run from the Actions tab (builds, but skips publishing).
-  workflow_dispatch:
+      - "v*"
 
-# Needed so the workflow can create the GitHub Release and upload assets.
 permissions:
   contents: write
 
 jobs:
-  release:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - id: v
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          # Semver pre-release = a `-` suffix (v1.0.0-rc.1).
+          if [[ "$TAG" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: setup
     runs-on: macos-14 # Apple-silicon runner; cross-compiles a universal binary
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Derive version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Sync version into manifests
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          # tauri.conf.json
-          node -e "const f='src-tauri/tauri.conf.json',j=require('./'+f);j.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
-          # package.json
-          node -e "const f='package.json',j=require('./'+f);j.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
-          # Cargo.toml (only the version line in the [package] section)
-          perl -i -pe 'BEGIN{$d=0} if(/^\[package\]/){$d=1} elsif(/^\[/){$d=0} s/^version = ".*"/version = "'"$VERSION"'"/ if $d' src-tauri/Cargo.toml
+        with:
+          ref: ${{ needs.setup.outputs.tag }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -72,102 +90,69 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
-      - name: Build release notes from CHANGELOG
-        id: notes
-        run: |
-          {
-            echo 'body<<__NOTES_EOF__'
-            node scripts/extract-changelog.mjs "${{ steps.version.outputs.version }}" \
-              || echo "See the assets below to download and install."
-            echo '__NOTES_EOF__'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build & publish release
+      - name: Build & upload macOS bundle
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # --- Code signing & notarization (see SETUP below) ---
-          # Leave these secrets unset for an UNSIGNED build (works, but users
-          # must right-click → Open the first time). Set them to ship signed.
+          # --- Code signing & notarization ---
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # --- Updater signing (see UPDATES below) ---
-          # Set these to emit a signature + latest.json for the auto-updater.
+          # --- Updater signing (emits latest.json + signature) ---
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Mutka ${{ github.ref_name }}"
-          releaseBody: ${{ steps.notes.outputs.body }}
-          releaseDraft: false # auto-publish (it's signed + notarized in CI)
-          prerelease: false
+          # Uploads to the existing release for this tag (release-please made it
+          # for a final; tauri-action creates one for a hand-pushed RC tag).
+          # releaseBody is left unset so release-please's changelog is preserved.
+          tagName: ${{ needs.setup.outputs.tag }}
+          releaseName: "Mutka ${{ needs.setup.outputs.tag }}"
+          releaseDraft: false
+          prerelease: ${{ needs.setup.outputs.prerelease }}
           args: --target universal-apple-darwin
 
-  # Publish @mutka-explorer/module (author-facing TS types) to npm on the same
-  # vX.Y.Z tag, versioned in lockstep with the app. Independent of the macOS
-  # build above. No-ops unless an actual tag was pushed (skips workflow_dispatch).
+  # npm packages publish on FINAL releases only. release-please has already bumped
+  # their package.json in lockstep, so they publish at the correct version with no
+  # stamping. RC tags skip this.
   publish-sdk:
+    needs: setup
+    if: needs.setup.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.setup.outputs.tag }}
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
-
-      - name: Derive version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Install SDK build deps
         working-directory: packages/module-sdk
         run: npm install --no-audit --no-fund
-
       - name: Build types bundle
         working-directory: packages/module-sdk
-        env:
-          MUTKA_VERSION: ${{ steps.version.outputs.version }}
         run: npm run build
-
       - name: Publish to npm
         working-directory: packages/module-sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          MUTKA_VERSION: ${{ steps.version.outputs.version }}
         run: npm publish --access public
 
-  # Publish @mutka-explorer/create (the `npm create @mutka-explorer` scaffolder)
-  # on the same vX.Y.Z tag, versioned in lockstep so generated projects pin a
-  # matching @mutka-explorer/module. No build step — it's plain ESM.
   publish-create:
+    needs: setup
+    if: needs.setup.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.setup.outputs.tag }}
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
-
-      - name: Derive version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Stamp version
-        working-directory: packages/create-module
-        run: node -e "const f='package.json',j=require('./'+f);j.version='${{ steps.version.outputs.version }}';require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
-
       - name: Publish to npm
         working-directory: packages/create-module
         env:

@@ -1,0 +1,45 @@
+name: Release Please
+
+# The release pipeline. On every push to main, release-please maintains a single
+# open "release PR" that accumulates the changelog + version bump computed from
+# the Conventional Commits since the last release (feat → minor, fix → patch,
+# `feat!` / `BREAKING CHANGE` → major). MERGING that PR is what cuts a release:
+# release-please bumps the three manifests in lockstep (package.json,
+# tauri.conf.json, Cargo.toml — see release-please-config.json), writes
+# CHANGELOG.md, and creates the `vX.Y.Z` git tag + GitHub Release. The `build`
+# job then builds the macOS bundle and uploads it to that release.
+#
+# Release candidates are NOT cut here — push a `vX.Y.Z-rc.N` tag by hand to fire
+# release.yml directly (see that file). The release PR keeps accumulating until
+# you merge it, so the final release still lists every change.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Only runs the cycle a release PR was just merged (release_created == true).
+  # Reuses the build+publish workflow so RC tags and final releases share ONE
+  # build definition.
+  build:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit
