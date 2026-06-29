@@ -47,9 +47,6 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install website dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: website
       - name: Generate API reference (TypeDoc)
         working-directory: website
         run: pnpm run docs:api
